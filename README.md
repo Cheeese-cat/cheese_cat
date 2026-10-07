@@ -47,8 +47,9 @@ src/main/java/com/xiaoyan/aiassistant
 ├── favorite      # 收藏管理
 ├── memory        # 短期记忆、长期记忆
 └── retrieval     # BM25、向量检索、混合检索、去重、重排序
+```
 
-测试工作
+## 项目开发过程
 本人负责该项目的全链路测试、前后端联调与故障排查，主要测试工作如下：
 
 接口与功能测试：使用 Postman / curl 对 20+ REST 接口进行功能与异常测试，覆盖参数缺失、越权访问、大文件上传、空数据等边界场景，累计发现并修复 10+ 个跨层缺陷。
@@ -63,49 +64,32 @@ AI 输出测试：针对三段式评价输出，设计「清晰图 / 模糊图 /
 
 缺陷管理：基于 IDEA 日志堆栈完成根因定位，记录 20+ Bug 的「发现 → 定位 → 修复 → 验证」全流程。
 
-系统流程
+系统流程：
 文档入库流程
 用户上传文档。
-
 后端使用 Apache Tika 提取正文文本。
-
 文本清洗 + 分块。
-
 文档与 chunk 元数据写入 MySQL。
-
 chunk 文本向量化后写入向量库。
-
 重建内存 BM25 索引。
-
 在线问答流程
 用户发送问题（文字 / 图片）。
-
 读取短期记忆（Redis）。
-
 Query 重写 + 多意图拆分 + 关键词扩展。
-
 召回长期记忆与 RAG 知识库片段。
-
 融合、去重、重排序。
-
 构建 Prompt，调用 DeepSeek / Qwen3-VL 生成回答。
-
 流式返回前端。
 
-环境要求
+## 环境要求
 JDK 17+
-
 Maven 3.8+
-
 MySQL 8+
-
 Redis 6+
-
 DeepSeek API Key
-
 硅基流动 API Key
 
-快速开始
+## 快速开始
 1. 创建数据库
 默认数据库名为 lc：
 
@@ -119,6 +103,7 @@ src/main/resources/schema.sql
 
 text
 src/main/resources/schema-user-memory-migration.sql
+
 2. 配置环境变量
 复制 application.yml.example 为 application.yml，填入你的配置：
 
@@ -136,6 +121,7 @@ spring:
   datasource:
     username: root
     password: YOUR_DB_PASSWORD
+
 3. 启动项目
 bash
 mvn spring-boot:run
@@ -215,36 +201,8 @@ app:
     max-token-budget: 32000
     recent-token-budget: 24000
     ttl-days: 7
-说明
+
+## 说明
 application.yml 包含真实 API Key 与数据库密码，已通过 .gitignore 排除，不会上传到 GitHub。
 
 需要本地运行时，复制 application.yml.example 为 application.yml，填入自己的配置。
-
-text
-
----
-
-## 改完后的操作
-
-### 1. 把上面的内容覆盖到 `README.md`
-
-用记事本或 IDEA 打开项目根目录的 `README.md`，**全选删除，粘贴上面的内容**，保存。
-
-### 2. 提交并推送
-
-```cmd
-git add README.md
-git commit -m "docs: 完善 README，突出测试工作"
-git push
-3. 刷新 GitHub 确认
-访问：
-
-text
-https://github.com/Cheeese-cat/cheese_cat
-看首页 README 是否显示新内容，重点确认：
-
-标题是「图片评鉴 · AI 评价助手」
-
-有「测试工作」这一段（HR 第一眼要看的）
-
-有「快速开始」「接口说明」
