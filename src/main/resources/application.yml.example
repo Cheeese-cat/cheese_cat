@@ -1,0 +1,104 @@
+﻿server:
+  port: 8080
+
+# JWT 配置
+jwt:
+  secret: xiaoyan-ai-secret-key-2024-secure-jwt-signing-key
+  expiration: 86400000  # 24小时，单位毫秒
+
+langchain4j:
+  open-ai:
+    # Chat 模型使用 DeepSeek
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: YOUR_DEEPSEEK_API_KEY
+      model-name: deepseek-chat
+      log-requests: true
+      log-responses: true
+
+    # 流式 Chat 模型同样使用 DeepSeek
+    streaming-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: YOUR_DEEPSEEK_API_KEY
+      model-name: deepseek-chat
+      log-requests: true
+      log-responses: true
+      accumulate-tool-call-id: false  # DeepSeek 流式响应的必要配置 [citation:2][citation:8]
+
+    # ===== 图片评价 → 硅基流动视觉模型 =====
+    vision-model:
+      base-url: https://api.siliconflow.cn/v1
+      api-key: YOUR_DEEPSEEK_API_KEY
+      model-name: Qwen/Qwen3-VL-30B-A3B-Instruct
+      log-requests: true
+      log-responses: true
+
+    # ===== Embedding → 硅基流动 =====
+    embedding-model:
+      base-url: https://api.siliconflow.cn/v1
+      api-key: YOUR_DEEPSEEK_API_KEY
+      model-name: BAAI/bge-m3
+      log-requests: false
+      log-responses: false
+      max-segments-per-batch: 10
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/lc?serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_USERNAME:root}
+    password: YOUR_DB_PASSWORD
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+
+app:
+  pinecone:
+    enabled: ${PINECONE_ENABLED:false}
+    api-key: ${PINECONE_API_KEY:}
+    index: ${PINECONE_INDEX:team-knowledge}
+    environment: ${PINECONE_ENVIRONMENT:}
+    project-id: ${PINECONE_PROJECT_ID:}
+    knowledge-namespace: knowledge
+    memory-namespace: memory
+    metadata-text-key: text
+  rag:
+    vector-top-k: 8
+    bm25-top-k: 8
+    final-top-k: 5
+    candidate-top-k: 30
+    min-vector-score: 0.6
+    max-rewrite-queries: 3
+    max-expanded-keywords: 6
+    semantic-dedup-enabled: true
+    semantic-dedup-threshold: 0.9
+    semantic-dedup-max-candidates: 30
+    reranker:
+      enabled: ${RERANKER_ENABLED:false}
+      base-url: ${RERANKER_BASE_URL:https://api.siliconflow.cn/v1/rerank}
+      api-key: ${SILICONFLOW_API_KEY:}
+      model: ${RERANKER_MODEL:BAAI/bge-reranker-v2-m3}
+      top-n: 5
+      timeout-seconds: 60
+  memory:
+    max-token-budget: 32000
+    recent-token-budget: 24000
+    summarize-overlap-ratio: 0.5
+    summary-target-min-chars: 100
+    summary-target-max-chars: 200
+    ttl-days: 7
+
+logging:
+  level:
+    com.xiaoyan.aiassistant: info
+    dev.langchain4j: info
+

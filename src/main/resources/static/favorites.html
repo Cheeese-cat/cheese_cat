@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的收藏 · 评鉴</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <script>
+        (function() {
+            if (localStorage.getItem('xiaoyanThemeDark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.global.prod.js"></script>
+    <style>
+        :root {
+            --bg: #f6f5ff;
+            --surface: #ffffff;
+            --surface-soft: #faf9ff;
+            --surface-hover: #f2f0ff;
+            --line: #e6e3f7;
+            --line-strong: #c9c3e8;
+            --text: #1e1b2e;
+            --text-secondary: #3d3656;
+            --muted: #6d6588;
+            --muted-light: #a098c0;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-soft: #ede9fe;
+            --primary-glow: rgba(124, 58, 237, .22);
+            --accent: #06b6d4;
+            --candy: #f472b6;
+            --candy-soft: #fce7f3;
+            --green: #10b981;
+            --green-soft: #d1fae5;
+            --red: #ef4444;
+            --red-soft: #fee2e2;
+            --shadow-sm: 0 2px 8px rgba(30, 27, 46, .06);
+            --shadow: 0 6px 20px rgba(30, 27, 46, .09);
+            --shadow-lg: 0 16px 40px rgba(30, 27, 46, .14);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0d17;
+            --surface: #1a1726;
+            --surface-soft: #221e30;
+            --surface-hover: #2a2538;
+            --line: #2e2940;
+            --line-strong: #3f3956;
+            --text: #f0eef8;
+            --text-secondary: #c8c3dd;
+            --muted: #8b84a8;
+            --muted-light: #5c5578;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .4);
+            --shadow: 0 6px 20px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .6);
+            --primary-dark: #c4b5fd;
+            --primary-light: #8b5cf6;
+            --primary-soft: #2a1f4a;
+            --accent-dark: #67e8f9;
+            --accent-soft: #0d3a4a;
+            --candy-dark: #f9a8d4;
+            --candy-soft: #3a1d2e;
+            --green: #34d399;
+            --green-soft: #0d3a2a;
+            --red: #fca5a5;
+            --red-soft: #4a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, .06) 0%, transparent 40%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted-light); }
+
+        button {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            min-height: 40px; padding: 0 18px;
+            border: 0; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all .18s ease;
+            box-shadow: 0 3px 10px var(--primary-glow);
+        }
+        button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+        button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--primary-glow); filter: brightness(1.05); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button.secondary {
+            background: var(--surface); color: var(--text-secondary);
+            border: 1.5px solid var(--line); box-shadow: var(--shadow-sm);
+        }
+        button.secondary:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); border-color: var(--primary-light); }
+        button.danger {
+            background: var(--surface); color: var(--red);
+            border: 1px solid var(--red-soft); box-shadow: none;
+            transform: translateZ(0); backface-visibility: hidden;
+        }
+        button.danger:hover:not(:disabled) { background: var(--red-soft); border-color: var(--red); }
+        button.ghost { background: transparent; color: var(--muted); box-shadow: none; padding: 0 10px; }
+        button.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        input, textarea {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+            background: var(--surface); color: var(--text); font-size: 14px;
+            outline: none; transition: all .18s ease;
+        }
+        input::placeholder, textarea::placeholder { color: var(--muted-light); }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 14px 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-mark {
+            width: 38px; height: 38px;
+            display: grid; place-items: center; border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--candy) 100%);
+            color: #fff; box-shadow: 0 4px 14px var(--primary-glow);
+        }
+        .brand-mark svg { width: 20px; height: 20px; }
+        .brand-title { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.2; }
+        .brand-title span {
+            display: block; font-size: 11px; font-weight: 500;
+            color: var(--muted); margin-top: 2px;
+        }
+        .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+        .page-head { margin-bottom: 20px; }
+        .page-head h1 {
+            font-size: 24px; font-weight: 800;
+            display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--candy));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .page-head h1 svg { width: 26px; height: 26px; -webkit-text-fill-color: var(--primary); color: var(--primary); }
+        .page-head p { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+        .toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            padding: 12px 14px; border-radius: var(--radius-sm);
+            background: var(--surface-soft); border: 1px solid var(--line);
+            margin-bottom: 14px;
+        }
+        .toolbar input {
+            flex: 1; min-width: 180px; padding: 8px 12px; font-size: 13px;
+            border-radius: 10px;
+        }
+        .toolbar-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+        .toolbar button { min-height: 34px; padding: 0 12px; font-size: 13px; }
+        .toolbar .type-tabs { display: flex; gap: 4px; }
+        .toolbar .type-tabs button.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .fav-card {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 16px; border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--surface); box-shadow: var(--shadow-sm);
+            transition: all .18s ease;
+        }
+        .fav-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); transform: translateY(-1px); }
+        .fav-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .fav-title {
+            display: flex; align-items: center; gap: 8px; flex: 1;
+            font-size: 15px; font-weight: 700; color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .fav-title svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--primary); }
+        .fav-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+        .fav-actions button { min-height: 30px; padding: 0 10px; font-size: 12px; }
+        .fav-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            border: 1px solid var(--line);
+            background: var(--surface-soft);
+        }
+        .fav-chat {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .fav-chat-user, .fav-chat-ai {
+            padding: 10px 12px; border-radius: 10px;
+            font-size: 14px; line-height: 1.7;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .fav-chat-user {
+            background: linear-gradient(135deg, var(--primary-soft), var(--surface-soft));
+            color: var(--text);
+            border-left: 3px solid var(--primary);
+        }
+        .fav-chat-ai {
+            background: var(--surface-soft);
+            color: var(--text-secondary);
+            border-left: 3px solid var(--accent);
+        }
+        .fav-chat-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .fav-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .meta-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 6px;
+            background: var(--primary-soft); color: var(--primary-dark);
+            font-size: 11px; font-weight: 600;
+        }
+        .meta-tag svg { width: 11px; height: 11px; }
+        .meta-tag.plain { background: var(--surface-soft); color: var(--muted); }
+        .meta-tag.type { background: var(--candy-soft); color: var(--candy-dark); }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px 0;
+            margin-top: 8px;
+        }
+        .pagination button {
+            min-height: 36px;
+            padding: 0 14px;
+            font-size: 13px;
+        }
+        .page-info {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .fold-hint {
+            text-align: center; padding: 12px;
+            font-size: 13px; color: var(--muted);
+            border: 1.5px dashed var(--line-strong);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+            cursor: pointer; transition: all .18s ease;
+        }
+        .fold-hint:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+
+        .empty {
+            display: grid; place-items: center; gap: 10px;
+            padding: 60px 20px; text-align: center;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            color: var(--muted);
+        }
+        .empty svg { width: 48px; height: 48px; color: var(--muted-light); }
+
+        .modal-mask {
+            position: fixed; inset: 0;
+            background: rgba(30, 27, 46, .6);
+            backdrop-filter: blur(6px);
+            display: grid; place-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal {
+            width: min(560px, 100%);
+            background: var(--surface); border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            display: flex; flex-direction: column;
+            max-height: 90vh;
+        }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px; border-bottom: 1px solid var(--line);
+        }
+        .modal-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; }
+        .modal-title svg { width: 18px; height: 18px; color: var(--primary); }
+        .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 10px;
+            padding: 14px 20px; border-top: 1px solid var(--line);
+            background: var(--surface-soft);
+        }
+        .img-preview { display: grid; place-items: center; padding: 10px; border: 1.5px solid var(--primary-light); border-radius: var(--radius-sm); background: var(--primary-soft); }
+        .img-preview img { max-width: 100%; max-height: 300px; border-radius: 8px; }
+
+        @media (max-width: 640px) {
+            .topbar { padding: 12px 16px; }
+            .container { padding: 16px 12px 40px; }
+            .page-head h1 { font-size: 20px; }
+        }
+
+        html.theme-transitioning,
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 3.5s ease,
+            color 3.5s ease,
+            border-color 3.5s ease,
+            box-shadow 3.5s ease,
+            fill 3.5s ease,
+            stroke 3.5s ease !important;
+            transition-delay: 0s !important;
+        }
+        html.theme-no-transition,
+        html.theme-no-transition *,
+        html.theme-no-transition *::before,
+        html.theme-no-transition *::after {
+            transition: none !important;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header class="topbar">
+        <div class="brand">
+            <img src="/images/logo.png" alt="评鉴"
+                 style="width:100%;height:100%;max-width:38px;max-height:38px;object-fit:contain;display:block;">
+            <div class="brand-title">
+                评鉴
+                <span>我的收藏</span>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <button class="secondary" @click="goBack">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+                返回对话
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-head">
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                </svg>
+                我的收藏
+            </h1>
+            <p>收藏的好图和对话片段，都会存这里 · 共 {{ list.length }} 条</p>
+        </div>
+
+        <div class="toolbar">
+            <div class="type-tabs">
+                <button :class="['secondary', typeFilter === '' ? 'active' : '']" @click="typeFilter = ''">全部</button>
+                <button :class="['secondary', typeFilter === 'image' ? 'active' : '']" @click="typeFilter = 'image'">图片</button>
+                <button :class="['secondary', typeFilter === 'chat' ? 'active' : '']" @click="typeFilter = 'chat'">对话</button>
+            </div>
+            <input v-model="keyword" placeholder="🔍 搜索标题 / 标签 / 内容">
+            <span class="toolbar-label">共 {{ filteredList.length }} 条</span>
+            <button class="ghost" @click="loadFavorites" title="刷新">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M8 16H3v5"/>
+                </svg>
+                刷新
+            </button>
+        </div>
+
+        <div v-if="filteredList.length === 0" class="empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+            </svg>
+            <div>{{ keyword ? '没搜到匹配的收藏' : '还没有收藏，去对话里点⭐收藏一下吧' }}</div>
+        </div>
+
+        <div v-else class="card-list">
+            <div v-for="fav in visibleList" :key="fav.id" class="fav-card">
+                <div class="fav-head">
+                    <div class="fav-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path v-if="fav.type === 'image'" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/>
+                            <circle v-if="fav.type === 'image'" cx="9" cy="9" r="2"/>
+                            <path v-if="fav.type === 'image'" d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            <path v-if="fav.type !== 'image'" d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                        {{ fav.title || '未命名' }}
+                    </div>
+                    <div class="fav-actions">
+                        <button class="secondary" @click="openEdit(fav)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                            </svg>
+                            编辑
+                        </button>
+                        <button class="danger" @click="deleteFavorite(fav)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                            删除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 图片收藏 -->
+                <template v-if="fav.type === 'image'">
+                    <img class="fav-image" :src="fav.content" alt="收藏的图片"
+                         @click="openImage(fav.content)"
+                         style="cursor: zoom-in;">
+                </template>
+
+                <!-- 对话收藏 -->
+                <template v-else>
+                    <div class="fav-chat">
+                        <div v-if="parseChat(fav.content).user">
+                            <div class="fav-chat-label">你</div>
+                            <div class="fav-chat-user">{{ parseChat(fav.content).user }}</div>
+                        </div>
+                        <div v-if="parseChat(fav.content).image" style="text-align:center;">
+                            <img class="fav-image" :src="parseChat(fav.content).image" alt="对话图"
+                                 style="max-height:200px;cursor:zoom-in;"
+                                 @click="openImage(parseChat(fav.content).image)">
+                        </div>
+                        <div v-if="parseChat(fav.content).assistant">
+                            <div class="fav-chat-label">评鉴</div>
+                            <div class="fav-chat-ai">{{ parseChat(fav.content).assistant }}</div>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="fav-meta">
+                    <span :class="['meta-tag', 'type']">
+                        {{ fav.type === 'image' ? '图片' : '对话' }}
+                    </span>
+                    <span v-if="fav.sourceType" class="meta-tag plain">{{ sourceLabel(fav.sourceType) }}</span>
+                    <span v-if="fav.tags" class="meta-tag plain">{{ fav.tags }}</span>
+                    <span class="meta-tag plain">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {{ formatTime(fav.createdAt) }}
+                    </span>
+                </div>
+            </div>
+
+            <div v-if="totalPages > 1" class="pagination">
+                <button class="secondary" @click="prevPage" :disabled="page === 1">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    上一页
+                </button>
+                <span class="page-info">{{ page }} / {{ totalPages }}</span>
+                <button class="secondary" @click="nextPage" :disabled="page === totalPages">
+                    下一页
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 图片放大弹窗 -->
+    <div v-if="imagePreview" class="modal-mask" @click.self="imagePreview = null" style="cursor: zoom-out;">
+        <img :src="imagePreview" style="max-width:95vw;max-height:95vh;border-radius:12px;box-shadow:var(--shadow-lg);" @click="imagePreview = null">
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div v-if="editing" class="modal-mask" @click.self="editing = null">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    编辑收藏
+                </div>
+                <button class="ghost" @click="editing = null">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input v-model="editing.title" placeholder="标题">
+                <input v-model="editing.tags" placeholder="标签（可选）">
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" @click="editing = null">取消</button>
+                <button @click="saveEdit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+        setup() {
+            const userId = ref(localStorage.getItem('xiaoyanUserId') || 'default');
+            const list = ref([]);
+            const keyword = ref('');
+            const typeFilter = ref('');
+            const editing = ref(null);
+            const imagePreview = ref(null);
+            const openImage = (src) => { imagePreview.value = src; };
+
+            // ★ filteredList 先定义
+            const filteredList = computed(() => {
+                let arr = list.value;
+                if (typeFilter.value) {
+                    arr = arr.filter(f => f.type === typeFilter.value);
+                }
+                const kw = keyword.value.trim().toLowerCase();
+                if (kw) {
+                    arr = arr.filter(f =>
+                        (f.title || '').toLowerCase().includes(kw) ||
+                        (f.tags || '').toLowerCase().includes(kw) ||
+                        (f.content || '').toLowerCase().includes(kw)
+                    );
+                }
+                return arr;
+            });
+
+            // ============ 分页 ============
+            const page = ref(1);
+            const pageSize = 5;
+            const totalPages = computed(() =>
+                Math.max(1, Math.ceil(filteredList.value.length / pageSize))
+            );
+            const visibleList = computed(() => {
+                const start = (page.value - 1) * pageSize;
+                return filteredList.value.slice(start, start + pageSize);
+            });
+            const goPage = (p) => {
+                if (p < 1 || p > totalPages.value) return;
+                page.value = p;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            const prevPage = () => goPage(page.value - 1);
+            const nextPage = () => goPage(page.value + 1);
+
+            // 筛选条件变化时回到第 1 页
+            watch([keyword, typeFilter], () => { page.value = 1; });
+
+            const formatTime = (t) => {
+                if (!t) return '';
+                const d = new Date(t);
+                if (isNaN(d.getTime())) return '';
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+
+            const sourceLabel = (s) => {
+                if (s === 'upload') return '上传的图';
+                if (s === 'draw') return '画板的图';
+                if (s === 'chat') return '对话片段';
+                return s;
+            };
+
+            const parseChat = (content) => {
+                try {
+                    const o = JSON.parse(content);
+                    return { user: o.user || '', assistant: o.assistant || '', image: o.image || null };
+                } catch (_) {
+                    return { user: content || '', assistant: '', image: null };
+                }
+            };
+
+            const goBack = () => { window.location.href = '/index.html'; };
+
+            const loadFavorites = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/favorites?userId=' + encodeURIComponent(userId.value), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) list.value = await res.json();
+                } catch (e) { console.error('加载失败:', e); }
+            };
+
+            const openEdit = (fav) => {
+                editing.value = {
+                    id: fav.id,
+                    title: fav.title || '',
+                    tags: fav.tags || ''
+                };
+            };
+
+            const saveEdit = async () => {
+                if (!editing.value) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/favorites/' + editing.value.id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({
+                            userId: userId.value,
+                            type: '',
+                            title: editing.value.title,
+                            content: '',
+                            tags: editing.value.tags,
+                            sourceType: ''
+                        })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    editing.value = null;
+                    await loadFavorites();
+                } catch (e) {
+                    alert('保存失败：' + e.message);
+                }
+            };
+
+            const deleteFavorite = async (fav) => {
+                if (!confirm('确认删除《' + (fav.title || '未命名') + '》？')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/favorites/' + fav.id + '?userId=' + encodeURIComponent(userId.value), {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    await loadFavorites();
+                } catch (e) { console.error('删除失败:', e); }
+            };
+
+            onMounted(loadFavorites);
+
+            return {
+                userId, list, keyword, typeFilter, editing, imagePreview,
+                filteredList, visibleList,
+                page, pageSize, totalPages, goPage, prevPage, nextPage,
+                formatTime, sourceLabel, parseChat,
+                goBack, loadFavorites, openEdit, saveEdit, deleteFavorite,
+                openImage
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

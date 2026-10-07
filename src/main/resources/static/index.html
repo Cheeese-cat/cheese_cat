@@ -1,0 +1,2799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片评鉴 · AI 评价</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <script>
+        (function() {
+            // 暗色
+            if (localStorage.getItem('xiaoyanThemeDark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            // 主色
+            const p = localStorage.getItem('xiaoyanThemePrimary');
+            if (p) document.documentElement.style.setProperty('--primary', p);
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.global.prod.js"></script>
+    <style>
+        :root {
+            --bg: #f6f5ff;
+            --surface: #ffffff;
+            --surface-soft: #faf9ff;
+            --surface-hover: #f2f0ff;
+            --line: #e6e3f7;
+            --line-strong: #c9c3e8;
+            --text: #1e1b2e;
+            --text-secondary: #3d3656;
+            --muted: #6d6588;
+            --muted-light: #a098c0;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-soft: #ede9fe;
+            --primary-glow: rgba(124, 58, 237, .22);
+            --accent: #06b6d4;
+            --accent-dark: #0891b2;
+            --accent-soft: #cffafe;
+            --candy: #f472b6;
+            --candy-dark: #db2777;
+            --candy-soft: #fce7f3;
+            --green: #10b981;
+            --green-soft: #d1fae5;
+            --amber: #f59e0b;
+            --amber-soft: #fef3c7;
+            --red: #ef4444;
+            --red-soft: #fee2e2;
+            --shadow-sm: 0 2px 8px rgba(30, 27, 46, .06);
+            --shadow: 0 6px 20px rgba(30, 27, 46, .09);
+            --shadow-lg: 0 16px 40px rgba(30, 27, 46, .14);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        /* 暗色：只覆盖底色和文字，主色由 JS 内联设置 */
+        [data-theme="dark"] {
+            --bg: #0f0d17;
+            --surface: #1a1726;
+            --surface-soft: #221e30;
+            --surface-hover: #2a2538;
+            --line: #2e2940;
+            --line-strong: #3f3956;
+            --text: #f0eef8;
+            --text-secondary: #c8c3dd;
+            --muted: #8b84a8;
+            --muted-light: #5c5578;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .4);
+            --shadow: 0 6px 20px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .6);
+            --primary-soft: #2a1f4a;   /* 深紫，替代原本的浅紫 #ede9fe */
+            --red: #fca5a5;        /* 暗色下用浅红，文字更清楚 */
+            --red-soft: #4a1a1a;   /* 暗色下用深红，作为边框/背景 */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, .06) 0%, transparent 40%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        button, input, textarea { font: inherit; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted-light); }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 40px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--surface-soft), var(--surface-hover));
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s ease;
+            box-shadow: 0 3px 10px var(--primary-glow);
+        }
+
+        button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px var(--primary-glow);
+            filter: brightness(1.05);
+        }
+
+        button:active:not(:disabled) { transform: translateY(0); }
+
+        button.secondary {
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1.5px solid var(--line);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: var(--primary-soft);
+            color: var(--primary-dark);
+            border-color: var(--primary-light);
+        }
+
+        button.danger {
+            background: var(--surface);
+            color: var(--red);
+            border: 1px solid var(--red-soft);
+            box-shadow: none;
+            /* 抗锯齿：强制 GPU 渲染 */
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        button.danger:hover:not(:disabled) {
+            background: var(--red-soft);
+            border-color: var(--red);
+        }
+
+        button.ghost {
+            background: transparent;
+            color: var(--muted);
+            box-shadow: none;
+            padding: 0 10px;
+        }
+
+        button.ghost:hover:not(:disabled) {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        input, textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: all .18s ease;
+        }
+
+        input::placeholder, textarea::placeholder { color: var(--muted-light); }
+
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+
+        textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
+
+        .app { display: grid; grid-template-rows: 66px 1fr; height: 100vh; }
+
+        .topnav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 24px;
+            background: color-mix(in srgb, var(--surface) 85%, transparent);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--line);
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+        }
+
+        .logo { display: flex; align-items: center; gap: 10px; }
+
+        .logo-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--candy) 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-mark::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            background: radial-gradient(circle, rgba(255,255,255,.35) 0%, transparent 55%);
+            animation: shimmer 4s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%); }
+            100% { transform: translateX(100%) translateY(100%); }
+        }
+
+        .logo-mark svg { width: 20px; height: 20px; position: relative; z-index: 1; }
+
+        .logo-text {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.15;
+            background: linear-gradient(135deg, var(--primary-dark), var(--candy));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text span {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            margin-top: 2px;
+            -webkit-text-fill-color: var(--muted);
+        }
+
+        .topnav-right { display: flex; align-items: center; gap: 10px; }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--candy));
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .main { display: grid; grid-template-columns: 1fr 380px; min-height: 0; overflow: hidden; }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            background: var(--bg);   /* ← 确保有底色 */
+            border-right: 1px solid var(--line);
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 24px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            flex: 0 0 auto;
+        }
+
+        .chat-header-info h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header-info h2 svg { width: 18px; height: 18px; color: var(--primary); }
+        .chat-header-info p { margin-top: 3px; font-size: 12px; color: var(--muted); }
+
+        .session-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            background: var(--primary-soft);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .session-pill svg { width: 12px; height: 12px; flex: 0 0 12px; }
+
+        .chat-messages {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 24px 12px;   /* 上下 24，左右 12 */
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 1000px;
+            margin: 0 auto 20px;
+            display: flex;
+            flex-direction: column;   /* ← 新增 */
+            gap: 12px;
+            animation: fadeIn .25s ease;
+            position: relative;
+            align-items: flex-start;  /* 保留 */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            flex-direction: column;
+            align-items: flex-end;   /* 用户消息靠右 */
+        }
+
+        .msg-avatar {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .msg-avatar.ai {
+            width: 56px;
+            height: 56px;
+            flex: 0 0 56px;
+            background: linear-gradient(135deg, var(--primary-soft), var(--candy-soft));
+            color: var(--primary);
+            box-shadow: 0 0 16px rgba(124, 58, 237, .12);
+        }
+
+        .msg-avatar.user {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+        }
+
+        .msg-avatar svg { width: 20px; height: 20px; }
+
+        .msg-body {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: min(900px, 85vw);
+        }
+
+        .message.user .msg-body { align-items: flex-end; }
+
+        .msg-content {
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.assistant .msg-content {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-top-left-radius: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .message.user .msg-content {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            border-top-right-radius: 4px;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .msg-content img {
+            max-width: 100%;
+            max-height: 320px;
+            border-radius: 10px;
+            margin-top: 8px;
+            display: block;
+            border: 1px solid var(--line);
+        }
+
+        .msg-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity .15s ease;
+        }
+
+        .message:hover .msg-actions { opacity: 1; }
+
+        .msg-actions button {
+            min-height: 24px;
+            padding: 0 2px;      /* 几乎无内边距 */
+            font-size: 11px;
+            border-radius: 6px;
+            background: transparent;   /* 无背景 */
+            border: none;
+            box-shadow: none;
+        }
+
+        .msg-actions button:hover:not(:disabled) {
+            background: transparent;
+            color: var(--primary);
+            transform: none;
+            box-shadow: none;
+            filter: none;
+        }
+
+        /* ============ 正在输入动画 ============ */
+        .msg-content.typing {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-indicator .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            opacity: .35;
+            animation: typing-bounce 1.2s infinite ease-in-out;
+        }
+
+        .typing-indicator .dot:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator .dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-indicator .dot:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes typing-bounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: .35; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        .chat-input-area { padding: 16px 24px 20px; background: var(--surface); border-top: 1px solid var(--line); flex: 0 0 auto; }
+        .chat-input-wrap { max-width: 820px; margin: 0 auto; }
+
+        .input-box {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--surface-soft);
+            border: 1.5px solid var(--line);
+            border-radius: 16px;
+            transition: all .18s ease;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--primary);
+            background: var(--surface);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+
+        .input-box textarea {
+            flex: 1;
+            min-height: 24px;
+            max-height: 160px;
+            padding: 6px 0;
+            border: 0;
+            background: transparent;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            box-shadow: none;
+        }
+
+        .input-box textarea:focus { box-shadow: none; }
+
+        .input-actions { display: flex; gap: 6px; align-items: center; }
+
+        .icon-btn {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        .icon-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .icon-btn.secondary {
+            background: transparent;
+            color: var(--muted);
+            border: 1.5px solid var(--line);
+            box-shadow: none;
+        }
+
+        .icon-btn.secondary:hover:not(:disabled) {
+            background: var(--red-soft);
+            color: var(--red);
+            border-color: #fca5a5;
+        }
+
+        .input-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--muted);
+            min-height: 16px;
+        }
+
+        .input-hint svg { width: 12px; height: 12px; color: var(--primary); animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .kb-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        .kb-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
+            flex: 0 0 auto;
+        }
+
+        .kb-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .kb-title svg { width: 18px; height: 18px; color: var(--primary); }
+
+        .kb-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 16px 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .kb-section { display: flex; flex-direction: column; gap: 10px; }
+
+        .kb-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+        }
+
+        .kb-section-title svg { width: 14px; height: 14px; }
+
+        .upload-zone {
+            display: grid;
+            place-items: center;
+            gap: 8px;
+            min-height: 110px;
+            padding: 18px;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, var(--surface-soft), var(--primary-soft));
+            text-align: center;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .upload-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--candy));
+            color: #fff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .upload-icon svg { width: 22px; height: 22px; }
+
+        .upload-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .upload-sub { font-size: 11px; color: var(--muted); }
+
+        .doc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding: 4px 6px;
+            margin: -4px -6px;
+        }
+
+        .doc-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            transition: all .18s ease;
+        }
+
+        .doc-item:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+
+        .doc-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+        .doc-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .doc-title svg { width: 15px; height: 15px; flex: 0 0 15px; color: var(--primary); }
+
+        .doc-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+        .meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--surface-soft);
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .meta-tag svg { width: 10px; height: 10px; }
+        .meta-tag.ready { background: var(--green-soft); color: var(--green); }
+        .meta-tag.warn { background: var(--amber-soft); color: var(--amber); }
+
+        .empty-hint {
+            display: grid;
+            place-items: center;
+            gap: 8px;
+            padding: 28px 16px;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            text-align: center;
+        }
+
+        .empty-hint svg { width: 32px; height: 32px; color: var(--muted-light); }
+        .empty-hint span { font-size: 12px; color: var(--muted); }
+
+        .memory-card { display: flex; flex-direction: column; gap: 8px; }
+        .memory-card textarea { min-height: 70px; font-size: 13px; }
+        .memory-card input { font-size: 13px; }
+        .status-line { font-size: 11px; color: var(--muted); min-height: 16px; }
+
+        .preview-wrap {
+            position: relative;
+            display: grid;
+            place-items: center;
+            padding: 10px;
+            border: 1.5px solid var(--primary-light);
+            border-radius: var(--radius-sm);
+            background: var(--primary-soft);
+        }
+
+        .preview-wrap img {
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            min-height: 26px;
+            padding: 0;
+            border-radius: 50%;
+            background: rgba(30, 27, 46, .7);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            box-shadow: none;
+        }
+
+        .preview-remove:hover { background: var(--red); transform: none; box-shadow: none; }
+        .preview-remove svg { width: 14px; height: 14px; }
+
+        /* ============ 弹窗通用 ============ */
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 27, 46, .6);
+            backdrop-filter: blur(6px);
+            display: grid;
+            place-items: center;
+            z-index: 100;
+            animation: fadeIn .18s ease;
+        }
+
+        .modal {
+            width: min(560px, 92vw);
+            max-height: 80vh;
+            background: var(--surface);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--line);
+            flex: 0 0 auto;
+        }
+
+        .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .modal-title svg { width: 18px; height: 18px; color: var(--primary); }
+
+        .modal-body {
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 14px 20px;
+            border-top: 1px solid var(--line);
+            background: var(--surface-soft);
+            flex: 0 0 auto;
+        }
+
+        /* 会话列表 */
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            transition: all .18s ease;
+            cursor: pointer;
+        }
+
+        .session-item:hover {
+            border-color: var(--primary-light);
+            background: var(--primary-soft);
+        }
+
+        .session-item.active {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .session-item-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .session-item-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-item-time {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .session-item-del {
+            width: 30px;
+            height: 30px;
+            min-height: 30px;
+            padding: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            box-shadow: none;
+        }
+
+        .session-item-del:hover:not(:disabled) {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .kb-toggle { display: inline-flex; }
+
+        @media (max-width: 980px) {
+            .main {
+                display: grid;
+                grid-template-columns: 1fr;
+                min-height: 0;
+                overflow: hidden;
+                height: 100%;
+            }
+            .kb-panel {
+                position: fixed;
+                top: 66px;
+                right: 0;
+                bottom: 0;
+                width: 380px;
+                max-width: 90vw;
+                transform: translateX(100%);
+                transition: transform .25s ease;
+                box-shadow: var(--shadow-lg);
+                z-index: 20;
+            }
+            .kb-panel.open { transform: translateX(0); }
+        }
+
+        @media (max-width: 640px) {
+            .topnav { padding: 0 12px; }
+            .logo-text { display: none; }
+            .chat-messages { padding: 16px; }
+            .chat-input-area { padding: 12px 16px 16px; }
+            .msg-body { max-width: calc(100vw - 100px); }
+            .user-badge span { display: none; }
+        }
+
+        /* ============ 主题切换过渡 ============ */
+        html.theme-transitioning,
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 3.5s ease,
+            color 3.5s ease,
+            border-color 3.5s ease,
+            box-shadow 3.5s ease,
+            fill 3.5s ease,
+            stroke 3.5s ease !important;
+            transition-delay: 0s !important;
+        }
+
+        html.theme-no-transition,
+        html.theme-no-transition *,
+        html.theme-no-transition *::before,
+        html.theme-no-transition *::after {
+            transition: none !important;
+        }
+        /* ============ 自定义对话背景 ============ */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            background: var(--bg);
+            border-right: 1px solid var(--line);
+            position: relative;
+        }
+        .chat-bg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: var(--bg);
+        }
+        .chat-area > *:not(.chat-bg-layer) {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ============ 专注模式 ============ */
+        body.focus-mode .topnav,
+        body.focus-mode .kb-panel,
+        body.focus-mode .chat-header,
+        body.focus-mode .msg-actions {
+            display: none !important;
+        }
+
+        body.focus-mode .app {
+            grid-template-rows: 0 1fr;
+            height: 100vh;
+        }
+        body.focus-mode .main {
+            grid-template-columns: 1fr;
+            height: 100vh;
+        }
+        body.focus-mode .chat-area {
+            border-right: none;
+            height: 100vh;
+        }
+        body.focus-mode .chat-messages {
+            padding: 40px 24px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* 专注模式：气泡更透，背景更清晰 */
+        body.focus-mode .message.assistant .msg-content {
+            background: color-mix(in srgb, var(--surface) 30%, transparent);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+            /* 提高文字可读性 */
+            color: var(--text);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, .6);
+        }
+
+        body.focus-mode .message.user .msg-content {
+            background: linear-gradient(135deg,
+            color-mix(in srgb, var(--primary) 35%, transparent),
+            color-mix(in srgb, var(--accent) 35%, transparent));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            box-shadow: 0 2px 12px rgba(124, 58, 237, .15);
+            /* 用户气泡是渐变+白字，本来就清楚，不用 text-shadow */
+        }
+
+        body.focus-mode .chat-input-area {
+            background: color-mix(in srgb, var(--surface) 40%, transparent);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+        }
+
+        body.focus-mode .input-box {
+            background: color-mix(in srgb, var(--surface-soft) 40%, transparent);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        body.focus-mode .msg-avatar {
+            opacity: .7;
+        }
+
+        /* 专注模式下，浮动按钮显示 */
+        .focus-toggle {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 200;
+            width: 40px;
+            height: 40px;
+            min-height: 40px;
+            padding: 0;
+            border-radius: 50%;
+            background: var(--surface);
+            color: var(--text);
+            border: 1.5px solid var(--line);
+            box-shadow: var(--shadow);
+            opacity: .25;
+            transition: opacity .2s ease;
+        }
+        .focus-toggle:hover { opacity: 1; }
+        body.focus-mode .focus-toggle { opacity: .5; }
+        body.focus-mode .focus-toggle:hover { opacity: 1; }
+
+        /* 背景控制小面板 */
+        .bg-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+        }
+        .bg-panel label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .bg-panel input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+        .bg-panel .bg-thumb {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--line);
+        }
+        @media (max-width: 768px) {
+            .chat-header {
+                display: none !important;
+            }
+        }
+        .main.panel-hidden {
+            grid-template-columns: 1fr 0;
+        }
+        .main.panel-hidden .kb-panel {
+            display: none;
+        }
+        /* ============ 消息内嵌图片（表情包） ============ */
+        .msg-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .msg-images img {
+            max-width: 280px;
+            max-height: 280px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            display: block;
+            cursor: zoom-in;
+            transition: transform .15s ease;
+        }
+        .msg-images img:hover {
+            transform: scale(1.03);
+        }
+        /* input-hint 这一行：让"试试说"靠右 */
+        .input-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--muted);
+            min-height: 16px;
+        }
+
+        .input-hint span {
+            flex: 1;   /* 提示文字占满中间，把按钮推到右边 */
+        }
+
+        /* "试试说"按钮 */
+        .emoji-hints-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 20px !important;
+            height: 20px !important;
+            padding: 0 8px !important;
+            border-radius: 10px;
+            background: transparent !important;
+            color: var(--muted) !important;
+            border: 1px solid var(--line) !important;
+            box-shadow: none !important;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s ease;
+            font-family: inherit;
+        }
+        .emoji-hints-toggle:hover {
+            color: var(--primary) !important;
+            border-color: var(--primary-light) !important;
+            background: var(--primary-soft) !important;
+        }
+
+        /* 展开后的标签行 */
+        .emoji-hints {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .emoji-hint-btn {
+            min-height: 22px !important;
+            height: 22px !important;
+            padding: 0 10px !important;
+            border-radius: 11px;
+            background: var(--primary-soft) !important;
+            color: var(--primary-dark) !important;
+            border: 1px solid var(--primary-light) !important;
+            box-shadow: none !important;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            font-family: inherit;
+        }
+        .emoji-hint-btn:hover:not(:disabled) {
+            background: var(--primary) !important;
+            color: #fff !important;
+            border-color: var(--primary) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px var(--primary-glow) !important;
+        }
+    </style>
+</head>
+<body>
+<!-- 登录验证 -->
+<script>
+    (function() {
+        const token = localStorage.getItem('authToken');
+        if (!token) { window.location.href = '/login.html'; return; }
+        fetch('/api/auth/verify', { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(r => r.json())
+            .then(r => {
+                if (!r.valid) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUser');
+                window.location.href = '/login.html';
+            });
+    })();
+</script>
+
+<div id="app" class="app">
+    <!-- ============ 顶部导航 ============ -->
+    <header class="topnav">
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="/images/logo.png" alt="评鉴"
+                     style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">
+            </div>
+            <div class="logo-text">
+                图片评鉴
+                <span>AI 评价助手</span>
+            </div>
+        </div>
+
+        <div class="topnav-right">
+            <button class="ghost" @click="toggleDark" :title="dark ? '切换到亮色' : '切换到暗色'">
+                <!-- 月亮图标（暗色时显示） -->
+                <svg v-if="dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <!-- 太阳图标（亮色时显示） -->
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2"/>
+                    <path d="M12 20v2"/>
+                    <path d="m4.93 4.93 1.41 1.41"/>
+                    <path d="m17.66 17.66 1.41 1.41"/>
+                    <path d="M2 12h2"/>
+                    <path d="M20 12h2"/>
+                    <path d="m6.34 17.66-1.41 1.41"/>
+                    <path d="m19.07 4.93-1.41 1.41"/>
+                </svg>
+                {{ dark ? '暗色' : '亮色' }}
+            </button>
+            <button class="ghost" @click="openHistory" title="往期对话">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                    <path d="M12 7v5l4 2"/>
+                </svg>
+                历史
+            </button>
+            <span class="user-badge">
+                <span class="user-avatar">{{ (currentUser || 'U').charAt(0).toUpperCase() }}</span>
+                <span>{{ currentUser || '未登录' }}</span>
+            </span>
+            <button class="ghost kb-toggle" @click="kbOpen = !kbOpen" title="素材库">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+                </svg>
+            </button>
+            <button class="danger" @click="logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                退出
+            </button>
+        </div>
+    </header>
+
+    <!-- ============ 主内容区 ============ -->
+    <div class="main" :class="{ 'panel-hidden': !kbOpen }">
+        <!-- ======== 左侧聊天区 ======== -->
+        <section class="chat-area">
+            <div class="chat-bg-layer"
+                 :style="chatBgStyle"
+                 v-if="chatBackground">
+            </div>
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <h2>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                        来，让我们继续
+                    </h2>
+                    <p>上传图片、画作，然后聊聊你的作品</p>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span class="session-pill" :title="sessionId">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {{ sessionId }}
+                    </span>
+                    <button class="secondary" @click="newSession">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
+                        </svg>
+                        开新局
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-messages" ref="chatBox">
+                <div v-for="(msg, i) in messages" :key="i" :class="['message', msg.role]">
+                    <div :class="['msg-avatar', msg.role === 'user' ? 'user' : 'ai']">
+                        <img v-if="msg.role === 'assistant'" src="/images/avatar.png" alt="AI"
+                             style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">
+                        <span v-else style="color:#fff;font-weight:700;">{{ (currentUser || 'U').charAt(0).toUpperCase() }}</span>
+                    </div>
+                    <div class="msg-body">
+                        <div v-if="msg.content || msg.pending" :class="['msg-content', msg.pending ? 'typing' : '']">
+                            <div v-if="msg.pending && !msg.content" class="typing-indicator">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                            <template v-else>
+                                {{ msg.content }}
+                                <img v-if="msg.image" :src="msg.image" alt="上传的图片">
+                            </template>
+                        </div>
+                        <!-- ★ 关键词命中的表情包 -->
+                        <div v-if="msg.images && msg.images.length > 0" class="msg-images">
+                            <img v-for="(img, idx) in msg.images" :key="idx" :src="img" alt="表情包">
+                        </div>
+                        <!-- 消息操作按钮 -->
+                        <div class="msg-actions" v-if="!msg.pending && msg.id">
+                            <template v-if="msg.role === 'user'">
+                                <button class="ghost" @click="openEdit(msg)" title="编辑并重发">
+                                    <svg ...>编辑图标</svg>
+                                    编辑
+                                </button>
+                            </template>
+                            <template v-else>
+                                <button class="ghost" @click="reAsk(msg)" title="重新回答">
+                                    <svg ...>重问图标</svg>
+                                    重问
+                                </button>
+                            </template>
+                            <!-- ★ 收藏按钮放在两个 template 之外，用户和 AI 都有 -->
+                            <button class="ghost" @click="favoriteMessage(msg)" :disabled="isFavorited(msg)" :title="isFavorited(msg) ? '已收藏' : '收藏这一条'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>{{ isFavorited(msg) ? '已收藏' : '收藏' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrap">
+                    <div v-if="pendingImage" class="preview-wrap" style="margin-bottom:10px;">
+                        <img :src="pendingImage" alt="预览">
+                        <button class="preview-remove" @click="pendingImage = null" title="移除">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="input-box">
+                        <textarea v-model="input" @keydown.enter.exact.prevent="send"
+                                  placeholder="说说你想让我评什么…也可以直接上传图片"
+                                  rows="1"></textarea>
+                        <div class="input-actions">
+                            <button class="icon-btn secondary" @click="send" :disabled="loading || (!input.trim() && !pendingImage)" title="发送">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m22 2-7 20-4-9-9-4Z"/>
+                                    <path d="M22 2 11 13"/>
+                                </svg>
+                            </button>
+                            <button v-if="loading" class="icon-btn secondary" @click="stop" title="停止">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="14" height="14" x="5" y="5" rx="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-hint">
+                        <svg v-if="loading" ...>...</svg>
+                        <span>{{ chatStatus || '按 Enter 发送 · Shift + Enter 换行' }}</span>
+                        <button class="emoji-hints-toggle" @click="emojiHintsOpen = !emojiHintsOpen"
+                                :title="emojiHintsOpen ? '收起' : '试试说'">
+                            💡 {{ emojiHintsOpen ? '收起' : '试试说' }}
+                        </button>
+                    </div>
+
+                    <!-- 展开后才显示的一行标签 -->
+                    <div class="emoji-hints" v-if="emojiHintsOpen && !loading">
+                        <button v-for="kw in keywordImages" :key="kw.label"
+                                class="emoji-hint-btn"
+                                @click="quickSend(kw.label)">
+                            {{ kw.label }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== 右侧面板 ======== -->
+        <aside :class="['kb-panel', kbOpen ? 'open' : '']">
+            <div class="kb-header">
+                <div class="kb-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 8v13H3V8"/>
+                        <path d="M1 3h22v5H1z"/>
+                        <path d="M10 12h4"/>
+                    </svg>
+                    我的设置
+                </div>
+                <button class="ghost kb-close" @click="kbOpen = false" title="收起素材库">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="kb-body">
+                <!-- 用户标识 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>我的 ID</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <input v-model="userId" @change="onUserIdChange" placeholder="输入你的昵称（如 zhangsan）">
+                    <div class="status-line">影响我记住你的偏好，按用户隔离</div>
+                </div>
+
+                <!-- 上传作品 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>上传作品</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="9" cy="9" r="2"/>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                        </svg>
+                    </div>
+                    <label class="upload-zone" for="image-file">
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/>
+                                <path d="m18 2 4 4"/>
+                                <path d="m17 7 4-4"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
+                        </div>
+                        <div class="upload-text">{{ imageFileName || '点这传图 or 拍张照' }}</div>
+                        <div class="upload-sub">照片 / 插画 / 截图 / 表情包 都行</div>
+                    </label>
+                    <input id="image-file" type="file" style="display:none" ref="imageInput"
+                           accept="image/*" @change="onImageChange">
+                    <div class="status-line">{{ imageStatus }}</div>
+                </div>
+
+                <!-- 随手画 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>随手画</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                            <path d="M2 2l7.586 7.586"/>
+                            <circle cx="11" cy="11" r="2"/>
+                        </svg>
+                    </div>
+                    <div class="upload-zone" @click="goDrawPage">
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                                <path d="M2 2l7.586 7.586"/>
+                                <circle cx="11" cy="11" r="2"/>
+                            </svg>
+                        </div>
+                        <div class="upload-text">打开画板随便画</div>
+                        <div class="upload-sub">手绘涂鸦也能评 · 画完直接发</div>
+                    </div>
+                </div>
+
+                <!-- 我的偏好 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>我的偏好 ({{ memoryList.length }})</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                    </div>
+                    <div class="memory-card">
+                        <input v-model="memoryTitle" placeholder="标签（如：我的画风偏好）">
+                        <textarea v-model="memoryContent" placeholder="写下你的喜好，我会记得…例如「我不喜欢太客套的夸」"></textarea>
+                        <input v-model="memoryTags" placeholder="分类标签（可选）">
+                        <button @click="addMemory" :disabled="!memoryContent.trim()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                <polyline points="17 21 17 13 7 13 7 21"/>
+                                <polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            记住它
+                        </button>
+                        <div class="status-line">{{ memoryStatus }}</div>
+                    </div>
+
+                    <div v-if="memoryList.length > 0" class="doc-list" style="margin-top:12px;">
+                        <div v-for="mem in memoryList.slice(0, 3)" :key="mem.id" class="doc-item">
+                            <div class="doc-row">
+                                <div class="doc-title" style="flex:1;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                                    </svg>
+                                    {{ mem.title || '未命名' }}
+                                </div>
+                            </div>
+                            <div class="meta-tag" style="white-space:normal;line-height:1.5;text-align:left;padding:6px 10px;">
+                                {{ mem.content }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button v-if="memoryList.length > 0" class="secondary" style="margin-top:10px;width:100%;" @click="goMemoryPage">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                        管理全部（{{ memoryList.length }} 条）
+                    </button>
+                </div>
+
+                <!-- 我的收藏 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>我的收藏 ({{ favoriteList.length }})</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                    </div>
+
+                    <!-- 快捷收藏当前对话 -->
+                    <button class="secondary" style="width:100%;" @click="quickFavoriteSession">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                        收藏当前这一轮
+                    </button>
+                    <div class="status-line">{{ favoriteStatus }}</div>
+
+                    <!-- 预览前 3 条 -->
+                    <div v-if="favoriteList.length > 0" class="doc-list" style="margin-top:8px;">
+                        <div v-for="fav in favoriteList.slice(0, 3)" :key="fav.id" class="doc-item">
+                            <div class="doc-row">
+                                <div class="doc-title" style="flex:1;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                                    </svg>
+                                    {{ fav.title || '未命名' }}
+                                </div>
+                            </div>
+                            <img v-if="fav.type === 'image'" :src="fav.content" style="max-height:80px;border-radius:8px;" />
+                            <div v-else class="meta-tag" style="white-space:normal;line-height:1.5;text-align:left;padding:6px 10px;">
+                                {{ previewChat(fav.content) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 管理全部 -->
+                    <button class="secondary" style="width:100%;margin-top:8px;" @click="goFavoritesPage" :disabled="favoriteList.length === 0">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                        管理全部（{{ favoriteList.length }} 条）
+                    </button>
+                </div>
+                <!-- 对话背景 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>对话背景</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="9" cy="9" r="2"/>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                        </svg>
+                    </div>
+
+                    <div class="bg-panel">
+                        <div v-if="chatBackground" class="bg-thumb" :style="{ backgroundImage: 'url(' + chatBackground + ')' }"></div>
+
+                        <label>
+                            <span>不透明度</span>
+                            <span>{{ Math.round(chatBgOpacity * 100) }}%</span>
+                        </label>
+                        <input type="range" min="5" max="100" :value="Math.round(chatBgOpacity * 100)"
+                               @input="chatBgOpacity = $event.target.value / 100; saveChatBg()">
+
+                        <label>
+                            <span>模糊度</span>
+                            <span>{{ chatBgBlur }}px</span>
+                        </label>
+                        <input type="range" min="0" max="20" :value="chatBgBlur"
+                               @input="chatBgBlur = +$event.target.value; saveChatBg()">
+
+                        <label>
+                            <span>显示方式</span>
+                            <span>{{ chatBgSize === 'cover' ? '铺满' : (chatBgSize === 'contain' ? '完整' : (chatBgSize === 'auto' ? '原尺寸' : '平铺')) }}</span>
+                        </label>
+                        <select :value="chatBgSize" @change="onBgSizeChange"
+                                style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:12px;">
+                            <option value="auto">原尺寸</option>
+                            <option value="cover">铺满（裁切）</option>
+                            <option value="contain">完整显示</option>
+                            <option value="repeat">平铺</option>
+                        </select>
+
+                        <label>
+                            <span>对齐</span>
+                            <span>{{ chatBgPosition }}</span>
+                        </label>
+                        <select :value="chatBgPosition" @change="onBgPositionChange"
+                                style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:12px;">
+                            <option value="center center">居中</option>
+                            <option value="top center">顶部</option>
+                            <option value="bottom center">底部</option>
+                            <option value="center left">左</option>
+                            <option value="center right">右</option>
+                        </select>
+
+                        <label class="upload-zone" for="chat-bg-file" style="min-height:60px;padding:10px;">
+                            <div class="upload-text" style="font-size:12px;">{{ chatBackground ? '换一张' : '选择背景图' }}</div>
+                        </label>
+                        <input id="chat-bg-file" type="file" style="display:none" ref="chatBgInput"
+                               accept="image/*" @change="onChatBgChange">
+
+                        <button v-if="chatBackground" class="danger" style="width:100%;min-height:32px;font-size:12px;" @click="removeChatBg">
+                            移除背景
+                        </button>
+                    </div>
+                </div>
+                <!-- 知识库文档 -->
+                <div class="kb-section">
+                    <div class="kb-section-title">
+                        <span>知识库文档 ({{ documents.length }})</span>
+                        <button class="ghost" @click="loadDocuments" title="刷新" style="min-height:24px;padding:0 8px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                                <path d="M8 16H3v5"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <label class="upload-zone" for="doc-file">
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                        </div>
+                        <div class="upload-text">{{ selectedFileName || '点这上传文档' }}</div>
+                        <div class="upload-sub">PDF / Word / MD / TXT / PPT / Excel · 选中即上传</div>
+                    </label>
+                    <input id="doc-file" type="file" style="display:none" ref="fileInput"
+                           accept=".pdf,.doc,.docx,.md,.txt,.ppt,.pptx,.xls,.xlsx"
+                           @change="onFileChange">
+                    <div class="status-line">{{ uploadStatus }}</div>
+
+                    <div class="doc-list" style="margin-top:8px;">
+                        <div v-if="documents.length === 0" class="empty-hint">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 8v13H3V8"/>
+                                <path d="M1 3h22v5H1z"/>
+                                <path d="M10 12h4"/>
+                            </svg>
+                            <span>还没有文档，上传一份试试</span>
+                        </div>
+                        <div v-for="doc in documents" :key="doc.id" class="doc-item">
+                            <div class="doc-row">
+                                <div class="doc-title">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                                        <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                                    </svg>
+                                    {{ doc.fileName }}
+                                </div>
+                                <button class="ghost" @click="deleteDocument(doc.id)" title="删除" style="color:var(--red);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"/>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="doc-meta">
+                                <span :class="['meta-tag', doc.status === 'READY' ? 'ready' : 'warn']">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12 6 12 12 16 14"/>
+                                    </svg>
+                                    {{ doc.status }}
+                                </span>
+                                <span class="meta-tag">{{ doc.chunkCount }} 片段</span>
+                                <span class="meta-tag">{{ formatSize(doc.fileSize) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button v-if="documents.length > 0" class="secondary" style="margin-top:10px;width:100%;" @click="goDocumentsPage">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 8v13H3V8"/>
+                            <path d="M1 3h22v5H1z"/>
+                            <path d="M10 12h4"/>
+                        </svg>
+                        管理全部（{{ documents.length }} 份）
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ============ 历史会话弹窗 ============ -->
+    <div v-if="historyOpen" class="modal-mask" @click.self="historyOpen = false">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                    往期对话
+                </div>
+                <button class="ghost" @click="historyOpen = false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div v-if="sessions.length === 0" class="empty-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 8v13H3V8"/>
+                        <path d="M1 3h22v5H1z"/>
+                    </svg>
+                    <span>还没有历史对话</span>
+                </div>
+                <div v-for="s in sessions" :key="s.sessionId"
+                     :class="['session-item', s.sessionId === sessionId ? 'active' : '']"
+                     @click="loadSession(s)">
+                    <div class="session-item-main">
+                        <div class="session-item-title">{{ s.title || '未命名对话' }}</div>
+                        <div class="session-item-time">{{ formatTime(s.updatedAt || s.createdAt) }}</div>
+                    </div>
+                    <button class="session-item-del" @click.stop="deleteSession(s)" title="删除">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 编辑消息弹窗 ============ -->
+    <div v-if="editingMessage" class="modal-mask" @click.self="editingMessage = null">
+        <div class="modal" style="width:min(560px,92vw);">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    编辑后重发
+                </div>
+                <button class="ghost" @click="editingMessage = null">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- ★ 图片预览 -->
+                <div v-if="editingMessage.image" class="preview-wrap">
+                    <img :src="editingMessage.image" alt="原图">
+                </div>
+                <textarea v-model="editingMessage.content" rows="5"
+                          style="font-size:14px;line-height:1.7;"></textarea>
+                <div class="status-line">修改后，此消息之后的所有对话将被清空，重新发送。图片会一并保留。</div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" @click="editingMessage = null">取消</button>
+                <button @click="confirmEdit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    确认修改并重发
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ★ 浮动专注按钮 -->
+    <button class="focus-toggle" @click="toggleFocus" :title="focusMode ? '退出专注 (F)' : '进入专注 (F)'">
+        <img src="/images/logo.png" alt="专注"
+             style="width:24px;height:24px;object-fit:contain;display:block;">
+    </button>
+</div>
+
+<script>
+    const { createApp, ref, computed, nextTick, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const onBgSizeChange = (e) => { chatBgSize.value = e.target.value; saveChatBg(); };
+            const onBgPositionChange = (e) => { chatBgPosition.value = e.target.value; saveChatBg(); };
+            const sessionId = ref(localStorage.getItem('xiaoyanSessionId') || String(Date.now()));
+            const userId = ref(localStorage.getItem('xiaoyanUserId') || 'default');
+            const currentUser = ref((JSON.parse(localStorage.getItem('currentUser') || '{}')).username || 'admin');
+            const kbOpen = ref(false);
+            const dark = ref(localStorage.getItem('xiaoyanThemeDark') === 'true');
+            // 点快捷标签 → 填入输入框
+            const quickInput = (text) => {
+                input.value = text;
+                // 聚焦到输入框
+                nextTick(() => {
+                    const ta = document.querySelector('.input-box textarea');
+                    if (ta) ta.focus();
+                });
+            };
+            const emojiHintsOpen = ref(false);
+            const applyDark = (animate = true) => {
+                if (animate) {
+                    document.documentElement.classList.add('theme-transitioning');
+                } else {
+                    document.documentElement.classList.add('theme-no-transition');
+                }
+
+                if (dark.value) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+                localStorage.setItem('xiaoyanThemeDark', dark.value ? 'true' : 'false');
+
+                if (animate) {
+                    clearTimeout(window.__themeTimer);
+                    window.__themeTimer = setTimeout(() => {
+                        document.documentElement.classList.remove('theme-transitioning');
+                    }, 3500);
+                } else {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            document.documentElement.classList.remove('theme-no-transition');
+                        });
+                    });
+                }
+            };
+
+            const toggleDark = () => {
+                dark.value = !dark.value;
+                applyDark();
+            };
+
+            const messages = ref([]);
+            // ============ 关键词 → 表情包 ============
+            const keywordImages = [
+                { label: '可爱', keywords: ['可爱'], image: '/images/emoji/cute.png' },
+                { label: '赚钱好枯燥', keywords: ['钱', '赚钱', '枯燥'], image: '/images/emoji/money.png' },
+                { label: '宝宝', keywords: ['宝宝'], image: '/images/emoji/baby.png' }
+            ];
+
+            const matchKeywordImage = (text) => {
+                if (!text) return null;
+                for (const item of keywordImages) {
+                    for (const kw of item.keywords) {
+                        if (text.includes(kw)) {
+                            return item.image;
+                        }
+                    }
+                }
+                return null;
+            };
+            // 快捷标签 → 直接发送（不走输入框）
+            const quickSend = (text) => {
+                if (loading.value) return;
+                sendMessage(text, null, false);
+            };
+            const input = ref('');
+            const loading = ref(false);
+            const uploading = ref(false);
+            const chatStatus = ref('');
+            const uploadStatus = ref('');
+            const imageStatus = ref('');
+            const memoryStatus = ref('');
+            const documents = ref([]);
+            const memoryTitle = ref('');
+            const memoryContent = ref('');
+            const memoryTags = ref('');
+            const memoryList = ref([]);
+            const favoriteList = ref([]);
+            // 用于判断"某条消息是否已收藏"
+            const favoriteKeys = computed(() => {
+                const set = new Set();
+                favoriteList.value.forEach(f => {
+                    if (f.type === 'chat') {
+                        try {
+                            const o = JSON.parse(f.content);
+                            set.add((o.user || '') + '||' + (o.assistant || '').slice(0, 50));
+                        } catch (_) {}
+                    }
+                });
+                return set;
+            });
+
+            const isFavorited = (msg) => {
+                if (!msg || msg.role === 'user' && msg.image) return false;   // 图片不判断
+                if (msg.role === 'user') {
+                    return favoriteKeys.value.has((msg.content || '') + '||' + '');
+                }
+                if (msg.role === 'assistant') {
+                    const idx = messages.value.indexOf(msg);
+                    let userMsg = null;
+                    for (let i = idx - 1; i >= 0; i--) {
+                        if (messages.value[i].role === 'user') { userMsg = messages.value[i]; break; }
+                    }
+                    if (!userMsg) return false;
+                    return favoriteKeys.value.has((userMsg.content || '') + '||' + (msg.content || '').slice(0, 50));
+                }
+                return false;
+            };
+
+            const favoriteStatus = ref('');
+
+            // ============ 对话背景 ============
+            const chatBackground = ref(localStorage.getItem('xiaoyanChatBackground') || '');
+            const chatBgOpacity = ref(parseFloat(localStorage.getItem('xiaoyanChatBgOpacity') || '0.15'));
+            const chatBgBlur = ref(parseInt(localStorage.getItem('xiaoyanChatBgBlur') || '8', 10));
+            const chatBgPosition = ref(localStorage.getItem('xiaoyanChatBgPosition') || 'center center');
+            const chatBgSize = ref(localStorage.getItem('xiaoyanChatBgSize') || 'auto');
+            const chatBgInput = ref(null);
+
+            const chatBgStyle = computed(() => {
+                if (!chatBackground.value) return {};
+                return {
+                    backgroundImage: 'url(' + chatBackground.value + ')',
+                    backgroundSize: chatBgSize.value || 'auto',
+                    backgroundPosition: chatBgPosition.value || 'center center',
+                    backgroundRepeat: 'no-repeat',
+                    filter: chatBgBlur.value > 0 ? `blur(${chatBgBlur.value}px)` : 'none',
+                    opacity: chatBgOpacity.value
+                };
+            });
+
+            const saveChatBg = () => {
+                if (chatBackground.value) {
+                    localStorage.setItem('xiaoyanChatBackground', chatBackground.value);
+                } else {
+                    localStorage.removeItem('xiaoyanChatBackground');
+                }
+                localStorage.setItem('xiaoyanChatBgOpacity', String(chatBgOpacity.value));
+                localStorage.setItem('xiaoyanChatBgBlur', String(chatBgBlur.value));
+                localStorage.setItem('xiaoyanChatBgPosition', chatBgPosition.value);
+                localStorage.setItem('xiaoyanChatBgSize', chatBgSize.value);
+            };
+
+            const onChatBgChange = () => {
+                const file = chatBgInput.value?.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const MAX = 1600;
+                        let { width, height } = img;
+                        if (width > MAX || height > MAX) {
+                            if (width > height) {
+                                height = Math.round(height * MAX / width);
+                                width = MAX;
+                            } else {
+                                width = Math.round(width * MAX / height);
+                                height = MAX;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                        chatBackground.value = canvas.toDataURL('image/jpeg', 0.85);
+                        saveChatBg();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                chatBgInput.value.value = '';
+            };
+
+            const removeChatBg = () => {
+                chatBackground.value = '';
+                saveChatBg();
+            };
+
+// ============ 专注模式 ============
+            const focusMode = ref(localStorage.getItem('xiaoyanFocusMode') === 'true');
+
+            const applyFocusMode = () => {
+                if (focusMode.value) {
+                    document.body.classList.add('focus-mode');
+                } else {
+                    document.body.classList.remove('focus-mode');
+                }
+                localStorage.setItem('xiaoyanFocusMode', focusMode.value ? 'true' : 'false');
+            };
+
+            const toggleFocus = () => {
+                focusMode.value = !focusMode.value;
+                applyFocusMode();
+            };
+
+            const loadFavorites = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/favorites?userId=' + encodeURIComponent(currentUserId()), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) favoriteList.value = await res.json();
+                } catch (e) { console.error(e); }
+            };
+
+            const previewChat = (content) => {
+                try {
+                    const o = JSON.parse(content);
+                    const u = (o.user || '').slice(0, 20);
+                    const a = (o.assistant || '').slice(0, 20);
+                    return `你：${u}… / AI：${a}…`;
+                } catch (_) {
+                    return (content || '').slice(0, 40);
+                }
+            };
+
+            const saveFavorite = async ({ type, title, content, sourceType = '' }) => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/favorites', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({
+                            userId: currentUserId(),
+                            type, title, content, tags: '', sourceType
+                        })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    favoriteStatus.value = '✓ 已收藏';
+                    await loadFavorites();
+                } catch (e) {
+                    favoriteStatus.value = '收藏失败：' + e.message;
+                }
+            };
+
+            const quickFavoriteSession = async () => {
+                const msgs = messages.value;
+                let lastUser = null, lastAssistant = null;
+                for (let i = msgs.length - 1; i >= 0; i--) {
+                    if (!lastAssistant && msgs[i].role === 'assistant' && msgs[i].content) lastAssistant = msgs[i];
+                    if (!lastUser && msgs[i].role === 'user') lastUser = msgs[i];
+                    if (lastUser && lastAssistant) break;
+                }
+                if (!lastUser || !lastAssistant) {
+                    favoriteStatus.value = '还没有可收藏的对话';
+                    return;
+                }
+                await saveFavorite({
+                    type: 'chat',
+                    title: (lastUser.content || '').slice(0, 30) || '对话片段',
+                    content: JSON.stringify({
+                        user: lastUser.content || '',
+                        assistant: lastAssistant.content || '',
+                        image: lastUser.image || null
+                    }),
+                    sourceType: 'chat'
+                });
+            };
+
+            const favoriteMessage = async (msg) => {
+                // 用户消息带图 → 存图片
+                if (msg.role === 'user' && msg.image) {
+                    await saveFavorite({
+                        type: 'image',
+                        title: '图片 ' + new Date().toLocaleString(),
+                        content: msg.image,
+                        sourceType: 'upload'
+                    });
+                    return;
+                }
+                // AI 消息 → 找上一条用户消息，配对存 chat
+                if (msg.role === 'assistant') {
+                    const idx = messages.value.indexOf(msg);
+                    let userMsg = null;
+                    for (let i = idx - 1; i >= 0; i--) {
+                        if (messages.value[i].role === 'user') { userMsg = messages.value[i]; break; }
+                    }
+                    if (!userMsg) { favoriteStatus.value = '找不到配对的提问'; return; }
+                    await saveFavorite({
+                        type: 'chat',
+                        title: (userMsg.content || '').slice(0, 30) || '对话片段',
+                        content: JSON.stringify({
+                            user: userMsg.content || '',
+                            assistant: msg.content || '',
+                            image: userMsg.image || null
+                        }),
+                        sourceType: 'chat'
+                    });
+                } else {
+                    // 用户消息且无图 → 只存用户侧
+                    await saveFavorite({
+                        type: 'chat',
+                        title: (msg.content || '').slice(0, 30) || '我的提问',
+                        content: JSON.stringify({ user: msg.content || '', assistant: '', image: null }),
+                        sourceType: 'chat'
+                    });
+                }
+            };
+
+            const goFavoritesPage = () => { window.location.href = '/favorites.html'; };
+            const selectedFileName = ref('');
+            const imageFileName = ref('');
+            const fileInput = ref(null);
+            const imageInput = ref(null);
+            const chatBox = ref(null);
+            const pendingImage = ref(null);
+            let controller = null;
+
+            // 往期对话相关
+            const historyOpen = ref(false);
+            const sessions = ref([]);
+            const editingMessage = ref(null);
+
+            const totalChunks = computed(() => documents.value.reduce((s, d) => s + (d.chunkCount || 0), 0));
+            const currentUserId = () => userId.value.trim() || 'default';
+
+            const saveUserId = () => {
+                userId.value = currentUserId();
+                localStorage.setItem('xiaoyanUserId', userId.value);
+            };
+
+            const scrollBottom = () => nextTick(() => {
+                if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight;
+            });
+
+            const formatSize = (size) => {
+                if (!size && size !== 0) return '未知';
+                if (size < 1024) return size + ' B';
+                if (size < 1048576) return (size / 1024).toFixed(1) + ' KB';
+                return (size / 1048576).toFixed(1) + ' MB';
+            };
+
+            const formatTime = (t) => {
+                if (!t) return '';
+                const d = new Date(t);
+                if (isNaN(d.getTime())) return '';
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+
+            // 给指定标签下的内容，每行自动补 -
+            const addDashToList = (text, tag) => {
+                const tagIdx = text.indexOf(tag);
+                if (tagIdx < 0) return text;
+                const start = tagIdx + tag.length;
+
+                // 找下一个标签
+                let nextTag = text.length;
+                for (const t of ['【评价】', '【认同】', '【建议】']) {
+                    const idx = text.indexOf(t, start);
+                    if (idx >= 0 && idx < nextTag) nextTag = idx;
+                }
+
+                const section = text.substring(start, nextTag);
+                const lines = section.split('\n');
+                const result = lines.map(line => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return line;
+                    if (trimmed.startsWith('- ')) return trimmed;
+                    return '- ' + trimmed;
+                }).join('\n');
+
+                return text.substring(0, start) + result + text.substring(nextTag);
+            };
+
+            // 合并"被硬换行切碎的句子"
+            const mergeShortLines = (text) => {
+                const lines = text.split('\n');
+                const result = [];
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) {
+                        result.push('');
+                        continue;
+                    }
+                    const prev = result.length > 0 ? result[result.length - 1] : '';
+                    const prevLast = prev.length > 0 ? prev.charAt(prev.length - 1) : '';
+                    const curFirst = trimmed.charAt(0);
+
+                    const prevNoPunct = !'。！？.!?、，；：'.includes(prevLast);
+                    const curStartsWithPunct = '。！？.!?、，；：'.includes(curFirst);
+                    const isListLine = trimmed.startsWith('【') || trimmed.startsWith('- ');
+
+                    if (prevNoPunct && curStartsWithPunct && !isListLine && prev.length > 0) {
+                        result[result.length - 1] = prev + trimmed;
+                    } else {
+                        result.push(trimmed);
+                    }
+                }
+                return result.join('\n');
+            };
+
+            // 给【认同】【建议】下每一行末尾补句号
+            const addPeriodToList = (text) => {
+                const lines = text.split('\n');
+                const result = [];
+                let inList = false;
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed === '【认同】' || trimmed === '【建议】') {
+                        inList = true;
+                        result.push(line);
+                    } else if (trimmed.startsWith('【')) {
+                        inList = false;
+                        result.push(line);
+                    } else if (inList && trimmed.length > 0) {
+                        const last = trimmed.charAt(trimmed.length - 1);
+                        if ('。！？.!?'.includes(last)) {
+                            result.push(line);
+                        } else {
+                            result.push(line + '。');
+                        }
+                    } else {
+                        result.push(line);
+                    }
+                }
+                return result.join('\n');
+            };
+
+            const formatAnswer = (raw) => {
+                if (!raw) return '';
+                let s = raw;
+
+                // 0. 去掉 markdown 代码块标记
+                s = s.replace(/```[a-zA-Z]*\n?/g, '');
+                s = s.replace(/```/g, '');
+
+                // 1. 统一已有 - 的格式
+                s = s.replace(/^[ \t\u3000]*-[ \t\u3000]*/gm, '- ');
+
+                // 2. 所有【标签】后换行
+                s = s.replace(/【评价】[ \t\n]*/g, '【评价】\n');
+                s = s.replace(/【认同】[ \t\n]*/g, '【认同】\n');
+                s = s.replace(/【建议】[ \t\n]*/g, '【建议】\n');
+
+                // 3. 【标签】前面不是换行 → 加空行
+                s = s.replace(/([^\n])【/g, '$1\n\n【');
+
+                // 4. 压缩 3+ 空行成 2 个
+                s = s.replace(/\n{3,}/g, '\n\n');
+
+                // 5. 行首行尾空格清理（保留 - 开头的行）
+                s = s.replace(/[ \t\u3000]+\n/g, '\n');
+                s = s.replace(/^(?!-)[ \t\u3000]+/gm, '');
+
+                // 6. 开头多余换行
+                s = s.replace(/^\n+/, '');
+
+                console.log('=== [1] 步骤7前 ===', JSON.stringify(s));
+
+                // ★ 7. 给【认同】【建议】下每行自动补 -
+                s = addDashToList(s, '【认同】');
+                s = addDashToList(s, '【建议】');
+
+                console.log('=== [2] 步骤7后（补 - ）===', JSON.stringify(s));
+
+                // ★ 8. 合并"一两个字独占一行"
+                s = mergeShortLines(s);
+
+                console.log('=== [3] 步骤8后（合并短行）===', JSON.stringify(s));
+
+                // ★ 9. 给列表项补句号
+                s = addPeriodToList(s);
+
+                console.log('=== [4] 步骤9后（补句号）===', JSON.stringify(s));
+
+                return s.trim();
+            };
+
+            const onFileChange = () => {
+                const file = fileInput.value?.files?.[0];
+                if (!file) { selectedFileName.value = ''; return; }
+                selectedFileName.value = file.name;
+                uploadDocument();
+            };
+
+            const onImageChange = () => {
+                const file = imageInput.value?.files?.[0];
+                if (!file) { imageStatus.value = '未选择图片'; return; }
+                imageFileName.value = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    pendingImage.value = e.target.result;
+                    imageStatus.value = '已选：' + file.name + '，点发送';
+                };
+                reader.readAsDataURL(file);
+                imageInput.value.value = '';
+            };
+
+            // ============ 加载当前会话历史 ============
+            const loadCurrentSession = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/chat/history/messages?userId=' +
+                        encodeURIComponent(currentUserId()) + '&sessionId=' + encodeURIComponent(sessionId.value), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        const list = await res.json();
+                        if (list.length > 0) {
+                            messages.value = list.map((m, i) => {
+                                const item = {
+                                    id: m.id,
+                                    role: m.role,
+                                    content: formatAnswer(m.content || ''),
+                                    image: m.image || null,
+                                    images: []
+                                };
+                                // AI 消息：往上找最近一条 user，看是否命中关键词
+                                if (m.role === 'assistant') {
+                                    for (let j = i - 1; j >= 0; j--) {
+                                        if (list[j].role === 'user') {
+                                            const kw = matchKeywordImage(list[j].content || '');
+                                            if (kw) item.images = [kw];
+                                            break;
+                                        }
+                                    }
+                                }
+                                return item;
+                            });
+                        } else {
+                            messages.value = [{
+                                role: 'assistant',
+                                content: '嗨！我是一个会审阅图片后并给出评价的 AI！\n\n你可以：\n• 传张图 / 画作给我，我们来聊聊它哪里戳人\n• 随便扔个截图、表情包、随手拍即可\n\n请发给我图片或是直接跟我聊天，让我们开始吧。'
+                            }];
+                        }
+                        scrollBottom();
+                    }
+                } catch (e) { console.error(e); }
+            };
+
+            // ============ 会话列表 ============
+            const openHistory = async () => {
+                historyOpen.value = true;
+                await loadSessions();
+            };
+
+            const loadSessions = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/chat/history/sessions?userId=' +
+                        encodeURIComponent(currentUserId()), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) sessions.value = await res.json();
+                } catch (e) { console.error(e); }
+            };
+
+            const loadSession = async (s) => {
+                sessionId.value = s.sessionId;
+                localStorage.setItem('xiaoyanSessionId', s.sessionId);
+                historyOpen.value = false;
+                await loadCurrentSession();
+            };
+
+            const deleteSession = async (s) => {
+                if (!confirm('确认删除这个会话？删除后不可恢复')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/chat/history/session?userId=' +
+                        encodeURIComponent(currentUserId()) + '&sessionId=' + encodeURIComponent(s.sessionId), {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    await loadSessions();
+                    if (s.sessionId === sessionId.value) {
+                        newSession();
+                    }
+                } catch (e) { console.error(e); }
+            };
+
+            const newSession = () => {
+                sessionId.value = String(Date.now());
+                localStorage.setItem('xiaoyanSessionId', sessionId.value);
+                messages.value = [{
+                    role: 'assistant',
+                    content: '新开一局，来，让我评评。'
+                }];
+                chatStatus.value = '';
+                pendingImage.value = null;
+                scrollBottom();
+            };
+
+            // ============ 编辑用户消息 ============
+            const openEdit = (msg) => {
+                editingMessage.value = {
+                    id: msg.id,
+                    content: msg.content,
+                    image: msg.image || null   // ← 保存 image
+                };
+            };
+
+            const confirmEdit = async () => {
+                if (!editingMessage.value || !editingMessage.value.content.trim()) return;
+                const newContent = editingMessage.value.content.trim();
+                const msgId = editingMessage.value.id;
+                const imgData = editingMessage.value.image;   // ← 取出 image
+
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/chat/history/message/' + msgId, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            userId: currentUserId(),
+                            sessionId: sessionId.value,
+                            message: newContent,
+                            image: imgData,
+                            preferences: memoryList.value.map(m => m.content).filter(Boolean)   // ★ 新增
+                        })
+                    });
+
+                    const idx = messages.value.findIndex(m => m.id === msgId);
+                    if (idx >= 0) {
+                        messages.value = messages.value.slice(0, idx);
+                    }
+
+                    editingMessage.value = null;
+                    // ★ 把 image 也传过去
+                    await sendMessage(newContent, imgData, false);
+
+                } catch (e) {
+                    alert('编辑失败：' + e.message);
+                }
+            };
+
+            // ============ 重问 AI ============
+            const reAsk = async (msg) => {
+                if (!confirm('重新回答？当前回复及之后的内容将被清空。')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    // 1. 找到这条 AI 消息对应的上一条用户消息
+                    const idx = messages.value.findIndex(m => m.id === msg.id);
+                    if (idx < 0) return;
+
+                    // 往上找最近的一条 user 消息
+                    let userMsg = null;
+                    for (let i = idx - 1; i >= 0; i--) {
+                        if (messages.value[i].role === 'user') {
+                            userMsg = messages.value[i];
+                            break;
+                        }
+                    }
+                    if (!userMsg) return;
+
+                    const userContent = userMsg.content;
+                    const userImage = userMsg.image;
+
+                    // 2. 调用后端：删除该 AI 消息及之后所有
+                    await fetch('/api/chat/history/message/' + msg.id + '/from', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+
+                    // 3. 前端删除该 AI 消息及之后所有，保留用户消息
+                    messages.value = messages.value.slice(0, idx);
+
+                    // 4. 重新发送（不重复添加用户消息）
+                    await sendMessage(userContent, userImage, true);
+
+                } catch (e) {
+                    alert('重问失败：' + e.message);
+                }
+            };
+
+            // ============ 核心：发送消息 ============
+            const send = async () => {
+                if ((!input.value.trim() && !pendingImage.value) || loading.value) return;
+
+                // 拦截"测试"
+                if (input.value.trim() === '测试') {
+                    messages.value.push({ role: 'user', content: '测试' });
+                    messages.value.push({ role: 'assistant', content: '正常运行中' });
+                    input.value = '';
+                    scrollBottom();
+                    return;
+                }
+
+                const userText = input.value.trim() || (pendingImage.value ? '（上传了一张图，评评）' : '');
+                const imgData = pendingImage.value;
+                input.value = '';
+                pendingImage.value = null;
+
+                await sendMessage(userText, imgData, false);
+            };
+            // 统一发送逻辑（含重新发送场景）
+            const sendMessage = async (userText, imgData, isResend) => {
+                saveUserId();
+
+                // ★ 命中关键词 → 不走 AI，直接返回图
+                const kwImage = matchKeywordImage(userText);
+                const isShortChat = !imgData && userText.length <= 20;
+                if (kwImage && isShortChat) {
+                    if (!isResend) {
+                        messages.value.push({ role: 'user', content: userText, image: imgData });
+                    }
+                    messages.value.push({
+                        role: 'assistant',
+                        content: '',
+                        images: [kwImage]
+                    });
+                    scrollBottom();
+                    return;
+                }
+
+                // 添加用户消息（如果不是"重问"场景）
+                if (!isResend) {
+                    messages.value.push({ role: 'user', content: userText, image: imgData });
+                }
+
+                const assistant = { role: 'assistant', content: '', pending: true, images: [] };
+                messages.value.push(assistant);
+                loading.value = true;
+                chatStatus.value = '正在看图…';
+                controller = new AbortController();
+                scrollBottom();
+
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/chat/stream', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            userId: currentUserId(),
+                            sessionId: sessionId.value,
+                            message: userText,
+                            image: imgData,
+                            preferences: memoryList.value.map(m => m.content).filter(Boolean)
+                        }),
+                        signal: controller.signal
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    let sseBuffer = '';
+
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        sseBuffer += decoder.decode(value, { stream: true });
+                        const lines = sseBuffer.split('\n');
+                        sseBuffer = lines.pop();
+
+                        let text = '';
+                        for (const line of lines) {
+                            if (line.startsWith('data:')) {
+                                text += line.substring(5);
+                            }
+                        }
+                        if (text) {
+                            assistant.pending = false;
+                            assistant.content += text;
+                            scrollBottom();
+                        }
+                    }
+                    if (sseBuffer.startsWith('data:')) {
+                        assistant.content += sseBuffer.substring(5);
+                    }
+                    assistant.content = formatAnswer(assistant.content);
+                    chatStatus.value = '';
+
+                    await loadCurrentSession();
+                    scrollBottom();
+                } catch (e) {
+                    assistant.pending = false;
+                    if (e.name !== 'AbortError') assistant.content = '请求失败：' + e.message;
+                    chatStatus.value = '';
+                } finally {
+                    assistant.pending = false;
+                    loading.value = false;
+                    controller = null;
+                }
+            };
+            const stop = () => { if (controller) controller.abort(); };
+
+            // ============ 用户切换 ============
+            const onUserIdChange = async () => {
+                saveUserId();
+                sessionId.value = String(Date.now());
+                localStorage.setItem('xiaoyanSessionId', sessionId.value);
+                await loadCurrentSession();
+                await loadMemories();
+            };
+
+            // ============ 文件/记忆相关 ============
+            const uploadDocument = async () => {
+                const file = fileInput.value?.files?.[0];
+                if (!file) { uploadStatus.value = '请选择文档'; return; }
+                const fd = new FormData();
+                fd.append('file', file);
+                uploadStatus.value = '正在解析…';
+                uploading.value = true;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/documents', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    const r = await res.json();
+                    uploadStatus.value = '✓ 已入库：' + r.chunkCount + ' 个片段';
+                    selectedFileName.value = '';
+                    await loadDocuments();
+                } catch (e) {
+                    uploadStatus.value = '上传失败：' + e.message;
+                } finally {
+                    uploading.value = false;
+                    if (fileInput.value) fileInput.value.value = '';
+                }
+            };
+
+            const loadDocuments = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/documents', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) documents.value = await res.json();
+                } catch (e) { console.error(e); }
+            };
+
+            const deleteDocument = async (id) => {
+                if (!confirm('确认删除？')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/documents/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    await loadDocuments();
+                } catch (e) { console.error(e); }
+            };
+
+            const loadMemories = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/memories?userId=' + encodeURIComponent(currentUserId()), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) memoryList.value = await res.json();
+                } catch (e) { console.error(e); }
+            };
+
+            const addMemory = async () => {
+                saveUserId();
+                memoryStatus.value = '正在保存…';
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/memories', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            userId: currentUserId(),
+                            title: memoryTitle.value,
+                            content: memoryContent.value,
+                            tags: memoryTags.value
+                        })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    memoryTitle.value = '';
+                    memoryContent.value = '';
+                    memoryTags.value = '';
+                    memoryStatus.value = '✓ 记住了';
+                    await loadMemories();
+                } catch (e) {
+                    memoryStatus.value = '保存失败：' + e.message;
+                }
+            };
+
+            const goMemoryPage = () => { window.location.href = '/memory.html'; };
+            const goDrawPage = () => { window.location.href = '/draw.html'; };
+            const goDocumentsPage = () => { window.location.href = '/documents.html'; };
+
+            const logout = () => {
+                if (confirm('确认退出登录吗？')) {
+                    fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('authToken') }
+                    }).catch(() => {});
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('rememberedUsername');
+                    localStorage.removeItem('xiaoyanSessionId');
+                    window.location.href = '/login.html';
+                }
+            };
+
+            onMounted(async () => {
+                if (window.innerWidth >= 980) {
+                    kbOpen.value = true;
+                }
+
+                applyFocusMode();
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                        const tag = document.activeElement?.tagName;
+                        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+                        toggleFocus();
+                    }
+                });
+                applyDark(false);
+                saveUserId();
+                await loadDocuments();
+                await loadMemories();
+                await loadFavorites();
+                localStorage.setItem('xiaoyanSessionId', sessionId.value);
+                // 加载当前会话的历史
+                await loadCurrentSession();
+                // 从画板跳转回来，带上图
+                const pendingDrawing = sessionStorage.getItem('pendingDrawing');
+                if (pendingDrawing) {
+                    sessionStorage.removeItem('pendingDrawing');
+                    pendingImage.value = pendingDrawing;
+                    imageStatus.value = '画板作品已就绪，点发送';
+                }
+            });
+
+            return {
+                sessionId, userId, currentUser, kbOpen, dark, favoriteList, favoriteStatus,favoriteKeys,
+                messages, input, loading, uploading, chatStatus, uploadStatus, imageStatus, memoryStatus,
+                documents, memoryTitle, memoryContent, memoryTags, selectedFileName, imageFileName,
+                memoryList, totalChunks, fileInput, imageInput, chatBox, pendingImage,
+                historyOpen, sessions, editingMessage, chatBgPosition, chatBgSize, emojiHintsOpen,
+                chatBackground, chatBgOpacity, chatBgBlur, chatBgInput, chatBgStyle,focusMode,keywordImages,
+                saveUserId, onUserIdChange, newSession, send,sendMessage, stop, uploadDocument, loadDocuments, toggleDark,
+                deleteDocument, addMemory, onFileChange, onImageChange, formatSize, formatTime, logout,
+                openHistory, loadSession, deleteSession, openEdit, confirmEdit, reAsk,isFavorited,
+                quickFavoriteSession, favoriteMessage, previewChat, goFavoritesPage,
+                goMemoryPage, goDrawPage, goDocumentsPage,
+                loadFavorites, saveFavorite,onBgSizeChange, onBgPositionChange,
+                saveChatBg, onChatBgChange, removeChatBg,
+                toggleFocus, quickInput, quickSend,
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

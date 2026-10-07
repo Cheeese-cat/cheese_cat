@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的偏好 · 评鉴</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <script>
+        (function() {
+            if (localStorage.getItem('xiaoyanThemeDark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.global.prod.js"></script>
+    <style>
+        :root {
+            --bg: #f6f5ff;
+            --surface: #ffffff;
+            --surface-soft: #faf9ff;
+            --surface-hover: #f2f0ff;
+            --line: #e6e3f7;
+            --line-strong: #c9c3e8;
+            --text: #1e1b2e;
+            --text-secondary: #3d3656;
+            --muted: #6d6588;
+            --muted-light: #a098c0;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-soft: #ede9fe;
+            --primary-glow: rgba(124, 58, 237, .22);
+            --accent: #06b6d4;
+            --candy: #f472b6;
+            --candy-soft: #fce7f3;
+            --red: #ef4444;
+            --red-soft: #fee2e2;
+            --shadow-sm: 0 2px 8px rgba(30, 27, 46, .06);
+            --shadow: 0 6px 20px rgba(30, 27, 46, .09);
+            --shadow-lg: 0 16px 40px rgba(30, 27, 46, .14);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0d17;
+            --surface: #1a1726;
+            --surface-soft: #221e30;
+            --surface-hover: #2a2538;
+            --line: #2e2940;
+            --line-strong: #3f3956;
+            --text: #f0eef8;
+            --text-secondary: #c8c3dd;
+            --muted: #8b84a8;
+            --muted-light: #5c5578;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .4);
+            --shadow: 0 6px 20px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .6);
+            --primary-dark: #c4b5fd;
+            --primary-light: #8b5cf6;
+            --primary-soft: #2a1f4a;
+            --accent-dark: #67e8f9;
+            --accent-soft: #0d3a4a;
+            --candy-dark: #f9a8d4;
+            --candy-soft: #3a1d2e;
+            --green: #34d399;
+            --green-soft: #0d3a2a;
+            --amber: #fbbf24;
+            --amber-soft: #3a2d0d;
+            --red: #fca5a5;
+            --red-soft: #4a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, .06) 0%, transparent 40%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted-light); }
+
+        button {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            min-height: 40px; padding: 0 18px;
+            border: 0; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all .18s ease;
+            box-shadow: 0 3px 10px var(--primary-glow);
+        }
+        button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+        button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--primary-glow); filter: brightness(1.05); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button.secondary {
+            background: var(--surface); color: var(--text-secondary);
+            border: 1.5px solid var(--line); box-shadow: var(--shadow-sm);
+        }
+        button.secondary:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); border-color: var(--primary-light); }
+        button.danger {
+            background: var(--surface); color: var(--red);
+            border: 1px solid var(--red-soft); box-shadow: none;
+            transform: translateZ(0); backface-visibility: hidden;
+        }
+        button.danger:hover:not(:disabled) { background: var(--red-soft); border-color: var(--red); }
+        button.ghost { background: transparent; color: var(--muted); box-shadow: none; padding: 0 10px; }
+        button.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        input, textarea {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+            background: var(--surface); color: var(--text); font-size: 14px;
+            outline: none; transition: all .18s ease;
+        }
+        input::placeholder, textarea::placeholder { color: var(--muted-light); }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+        textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 14px 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-mark {
+            width: 38px; height: 38px;
+            display: grid; place-items: center; border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--candy) 100%);
+            color: #fff; box-shadow: 0 4px 14px var(--primary-glow);
+        }
+        .brand-mark svg { width: 20px; height: 20px; }
+        .brand-title { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.2; }
+        .brand-title span {
+            display: block; font-size: 11px; font-weight: 500;
+            color: var(--muted); margin-top: 2px;
+        }
+        .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+        .page-head { margin-bottom: 20px; }
+        .page-head h1 {
+            font-size: 24px; font-weight: 800;
+            display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--candy));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .page-head h1 svg { width: 26px; height: 26px; -webkit-text-fill-color: var(--primary); color: var(--primary); }
+        .page-head p { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+        .add-panel {
+            padding: 18px; border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--surface); box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+        .add-panel-grid { display: flex; flex-direction: column; gap: 10px; }
+        .add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .status-line { font-size: 12px; color: var(--muted); min-height: 18px; }
+
+        .toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            padding: 12px 14px; border-radius: var(--radius-sm);
+            background: var(--surface-soft); border: 1px solid var(--line);
+            margin-bottom: 14px;
+        }
+        .toolbar input {
+            flex: 1; min-width: 180px; padding: 8px 12px; font-size: 13px;
+            border-radius: 10px;
+        }
+        .toolbar-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+        .toolbar button { min-height: 34px; padding: 0 12px; font-size: 13px; }
+
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+        .memory-card {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 16px; border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--surface); box-shadow: var(--shadow-sm);
+            transition: all .18s ease;
+        }
+        .memory-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); transform: translateY(-1px); }
+        .memory-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .memory-title {
+            display: flex; align-items: center; gap: 8px; flex: 1;
+            font-size: 15px; font-weight: 700; color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .memory-title svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--primary); }
+        .memory-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+        .memory-actions button { min-height: 30px; padding: 0 10px; font-size: 12px; }
+        .memory-content {
+            font-size: 14px; line-height: 1.7; color: var(--text-secondary);
+            white-space: pre-wrap; word-break: break-word;
+            padding: 10px 12px; border-radius: 10px;
+            background: var(--surface-soft);
+        }
+        .memory-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .meta-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 6px;
+            background: var(--primary-soft); color: var(--primary-dark);
+            font-size: 11px; font-weight: 600;
+        }
+        .meta-tag svg { width: 11px; height: 11px; }
+        .meta-tag.plain { background: var(--surface-soft); color: var(--muted); }
+
+        .fold-hint {
+            text-align: center; padding: 12px;
+            font-size: 13px; color: var(--muted);
+            border: 1.5px dashed var(--line-strong);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+            cursor: pointer; transition: all .18s ease;
+        }
+        .fold-hint:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+
+        .empty {
+            display: grid; place-items: center; gap: 10px;
+            padding: 60px 20px; text-align: center;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            color: var(--muted);
+        }
+        .empty svg { width: 48px; height: 48px; color: var(--muted-light); }
+
+        .modal-mask {
+            position: fixed; inset: 0;
+            background: rgba(30, 27, 46, .6);
+            backdrop-filter: blur(6px);
+            display: grid; place-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal {
+            width: min(560px, 100%);
+            background: var(--surface); border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            display: flex; flex-direction: column;
+            max-height: 90vh;
+        }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px; border-bottom: 1px solid var(--line);
+        }
+        .modal-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; }
+        .modal-title svg { width: 18px; height: 18px; color: var(--primary); }
+        .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 10px;
+            padding: 14px 20px; border-top: 1px solid var(--line);
+            background: var(--surface-soft);
+        }
+        @media (max-width: 640px) {
+            .topbar { padding: 12px 16px; }
+            .container { padding: 16px 12px 40px; }
+            .add-row { grid-template-columns: 1fr; }
+            .page-head h1 { font-size: 20px; }
+        }
+
+        html.theme-transitioning,
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 3.5s ease,
+            color 3.5s ease,
+            border-color 3.5s ease,
+            box-shadow 3.5s ease,
+            fill 3.5s ease,
+            stroke 3.5s ease !important;
+            transition-delay: 0s !important;
+        }
+        html.theme-no-transition,
+        html.theme-no-transition *,
+        html.theme-no-transition *::before,
+        html.theme-no-transition *::after {
+            transition: none !important;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header class="topbar">
+        <div class="brand">
+            <img src="/images/logo.png" alt="评鉴"
+                 style="width:100%;height:100%;max-width:38px;max-height:38px;object-fit:contain;display:block;">
+            <div class="brand-title">
+                评鉴
+                <span>我的偏好管理</span>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <button class="secondary" @click="goBack">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+                返回对话
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-head">
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+                我的偏好
+            </h1>
+            <p>记录你的喜好、雷区和风格倾向，让我评得更懂你 · 当前用户：<b>{{ userId }}</b></p>
+        </div>
+
+        <section class="add-panel">
+            <div class="add-panel-grid">
+                <div class="add-row">
+                    <input v-model="form.title" placeholder="标题（如：我的画风偏好）">
+                    <input v-model="form.tags" placeholder="标签（可选）">
+                </div>
+                <textarea v-model="form.content" placeholder="写下你的喜好，我会记得…例如「我不喜欢太客套的夸」"></textarea>
+                <button @click="addMemory" :disabled="!form.content.trim() || saving" style="align-self:flex-start;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    {{ saving ? '保存中…' : '新增一条' }}
+                </button>
+                <div class="status-line">{{ status }}</div>
+            </div>
+        </section>
+
+        <div class="toolbar">
+            <input v-model="keyword" placeholder="🔍 搜索标题 / 内容 / 标签">
+            <span class="toolbar-label">共 {{ filteredList.length }} 条</span>
+            <button class="ghost" @click="toggleSort" :title="sortDesc ? '当前：最新在前' : '当前：最早在前'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 16 4 4 4-4"/>
+                    <path d="M7 20V4"/>
+                    <path d="m21 8-4-4-4 4"/>
+                    <path d="M17 4v16"/>
+                </svg>
+                {{ sortDesc ? '最新在前' : '最早在前' }}
+            </button>
+            <button class="ghost" @click="loadMemories" title="刷新">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M8 16H3v5"/>
+                </svg>
+                刷新
+            </button>
+        </div>
+
+        <div v-if="filteredList.length === 0" class="empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 8v13H3V8"/>
+                <path d="M1 3h22v5H1z"/>
+                <path d="M10 12h4"/>
+            </svg>
+            <div>{{ keyword ? '没搜到匹配的记录' : '还没有偏好记录，写一条试试 👆' }}</div>
+        </div>
+
+        <div v-else class="card-list">
+            <div v-for="mem in visibleList" :key="mem.id" class="memory-card">
+                <div class="memory-head">
+                    <div class="memory-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+                        </svg>
+                        {{ mem.title || '未命名' }}
+                    </div>
+                    <div class="memory-actions">
+                        <button class="secondary" @click="openEdit(mem)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                            </svg>
+                            编辑
+                        </button>
+                        <button class="danger" @click="deleteMemory(mem.id)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                            删除
+                        </button>
+                    </div>
+                </div>
+                <div class="memory-content">{{ mem.content }}</div>
+                <div class="memory-meta">
+                    <span v-if="mem.tags" class="meta-tag">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                            <line x1="7" y1="7" x2="7.01" y2="7"/>
+                        </svg>
+                        {{ mem.tags }}
+                    </span>
+                    <span class="meta-tag plain">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {{ formatTime(mem.updatedAt || mem.createdAt) }}
+                    </span>
+                </div>
+            </div>
+
+            <div v-if="filteredList.length > visibleCount" class="fold-hint" @click="expandAll">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:4px;">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+                展开全部（还有 {{ filteredList.length - visibleCount }} 条）
+            </div>
+            <div v-else-if="expanded && filteredList.length > defaultCount" class="fold-hint" @click="collapseAll">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:4px;">
+                    <polyline points="18 15 12 9 6 15"/>
+                </svg>
+                收起
+            </div>
+        </div>
+    </main>
+
+    <div v-if="editing" class="modal-mask" @click.self="editing = null">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    编辑偏好
+                </div>
+                <button class="ghost" @click="editing = null">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input v-model="editing.title" placeholder="标题">
+                <textarea v-model="editing.content" placeholder="内容"></textarea>
+                <input v-model="editing.tags" placeholder="标签">
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" @click="editing = null">取消</button>
+                <button @click="saveEdit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const userId = ref(localStorage.getItem('xiaoyanUserId') || 'default');
+            const list = ref([]);
+            const keyword = ref('');
+            const sortDesc = ref(true);
+            const saving = ref(false);
+            const status = ref('');
+            const editing = ref(null);
+            const form = ref({ title: '', content: '', tags: '' });
+            const defaultCount = 3;
+            const expanded = ref(false);
+
+            const filteredList = computed(() => {
+                const kw = keyword.value.trim().toLowerCase();
+                let arr = list.value;
+                if (kw) {
+                    arr = arr.filter(m =>
+                        (m.title || '').toLowerCase().includes(kw) ||
+                        (m.content || '').toLowerCase().includes(kw) ||
+                        (m.tags || '').toLowerCase().includes(kw)
+                    );
+                }
+                arr = [...arr].sort((a, b) => {
+                    const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                    const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                    return sortDesc.value ? tb - ta : ta - tb;
+                });
+                return arr;
+            });
+
+            const visibleCount = computed(() => {
+                if (expanded.value) return filteredList.value.length;
+                return Math.min(defaultCount, filteredList.value.length);
+            });
+
+            const visibleList = computed(() =>
+                filteredList.value.slice(0, visibleCount.value)
+            );
+
+            const expandAll = () => { expanded.value = true; };
+            const collapseAll = () => { expanded.value = false; };
+            const toggleSort = () => { sortDesc.value = !sortDesc.value; };
+
+            const formatTime = (t) => {
+                if (!t) return '';
+                const d = new Date(t);
+                if (isNaN(d.getTime())) return '';
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+
+            const goBack = () => { window.location.href = '/index.html'; };
+
+            const loadMemories = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/memories?userId=' + encodeURIComponent(userId.value), {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) list.value = await res.json();
+                } catch (e) {
+                    console.error('加载失败:', e);
+                }
+            };
+
+            const addMemory = async () => {
+                if (!form.value.content.trim()) return;
+                saving.value = true;
+                status.value = '正在保存…';
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/memories', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            userId: userId.value,
+                            title: form.value.title,
+                            content: form.value.content,
+                            tags: form.value.tags
+                        })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    form.value = { title: '', content: '', tags: '' };
+                    status.value = '✓ 已保存';
+                    await loadMemories();
+                } catch (e) {
+                    status.value = '保存失败：' + e.message;
+                } finally {
+                    saving.value = false;
+                }
+            };
+
+            const openEdit = (mem) => {
+                editing.value = {
+                    id: mem.id,
+                    title: mem.title || '',
+                    content: mem.content || '',
+                    tags: mem.tags || ''
+                };
+            };
+
+            const saveEdit = async () => {
+                if (!editing.value) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/memories/' + editing.value.id, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            userId: userId.value,
+                            title: editing.value.title,
+                            content: editing.value.content,
+                            tags: editing.value.tags
+                        })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    editing.value = null;
+                    await loadMemories();
+                    status.value = '✓ 已更新';
+                } catch (e) {
+                    status.value = '更新失败：' + e.message;
+                }
+            };
+
+            const deleteMemory = async (id) => {
+                if (!confirm('确认删除这条偏好？')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/memories/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    await loadMemories();
+                } catch (e) {
+                    console.error('删除失败:', e);
+                }
+            };
+
+            onMounted(loadMemories);
+
+            return {
+                userId, list, keyword, sortDesc, saving, status, editing, form,
+                filteredList, visibleList, visibleCount,
+                expandAll, collapseAll, toggleSort,
+                formatTime, goBack,
+                loadMemories, addMemory, openEdit, saveEdit, deleteMemory
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

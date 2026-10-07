@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库文档 · 评鉴</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <script>
+        (function() {
+            if (localStorage.getItem('xiaoyanThemeDark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.global.prod.js"></script>
+    <style>
+        :root {
+            --bg: #f6f5ff;
+            --surface: #ffffff;
+            --surface-soft: #faf9ff;
+            --surface-hover: #f2f0ff;
+            --line: #e6e3f7;
+            --line-strong: #c9c3e8;
+            --text: #1e1b2e;
+            --text-secondary: #3d3656;
+            --muted: #6d6588;
+            --muted-light: #a098c0;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-soft: #ede9fe;
+            --primary-glow: rgba(124, 58, 237, .22);
+            --accent: #06b6d4;
+            --candy: #f472b6;
+            --green: #10b981;
+            --green-soft: #d1fae5;
+            --amber: #f59e0b;
+            --amber-soft: #fef3c7;
+            --red: #ef4444;
+            --red-soft: #fee2e2;
+            --shadow-sm: 0 2px 8px rgba(30, 27, 46, .06);
+            --shadow: 0 6px 20px rgba(30, 27, 46, .09);
+            --shadow-lg: 0 16px 40px rgba(30, 27, 46, .14);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0d17;
+            --surface: #1a1726;
+            --surface-soft: #221e30;
+            --surface-hover: #2a2538;
+            --line: #2e2940;
+            --line-strong: #3f3956;
+            --text: #f0eef8;
+            --text-secondary: #c8c3dd;
+            --muted: #8b84a8;
+            --muted-light: #5c5578;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .4);
+            --shadow: 0 6px 20px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .6);
+            --primary-dark: #c4b5fd;
+            --primary-light: #8b5cf6;
+            --primary-soft: #2a1f4a;
+            --accent-dark: #67e8f9;
+            --accent-soft: #0d3a4a;
+            --candy-dark: #f9a8d4;
+            --candy-soft: #3a1d2e;
+            --green: #34d399;
+            --green-soft: #0d3a2a;
+            --amber: #fbbf24;
+            --amber-soft: #3a2d0d;
+            --red: #fca5a5;
+            --red-soft: #4a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, .06) 0%, transparent 40%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted-light); }
+
+        button {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            min-height: 40px; padding: 0 18px;
+            border: 0; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all .18s ease;
+            box-shadow: 0 3px 10px var(--primary-glow);
+        }
+        button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+        button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--primary-glow); filter: brightness(1.05); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button.secondary {
+            background: var(--surface); color: var(--text-secondary);
+            border: 1.5px solid var(--line); box-shadow: var(--shadow-sm);
+        }
+        button.secondary:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); border-color: var(--primary-light); }
+        button.danger {
+            background: var(--surface); color: var(--red);
+            border: 1px solid var(--red-soft); box-shadow: none;
+            transform: translateZ(0); backface-visibility: hidden;
+        }
+        button.danger:hover:not(:disabled) { background: var(--red-soft); border-color: var(--red); }
+        button.ghost { background: transparent; color: var(--muted); box-shadow: none; padding: 0 10px; }
+        button.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        input, textarea {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+            background: var(--surface); color: var(--text); font-size: 14px;
+            outline: none; transition: all .18s ease;
+        }
+        input::placeholder, textarea::placeholder { color: var(--muted-light); }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 14px 28px;
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-mark {
+            width: 38px; height: 38px;
+            display: grid; place-items: center; border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--candy) 100%);
+            color: #fff; box-shadow: 0 4px 14px var(--primary-glow);
+        }
+        .brand-mark svg { width: 20px; height: 20px; }
+        .brand-title { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.2; }
+        .brand-title span {
+            display: block; font-size: 11px; font-weight: 500;
+            color: var(--muted); margin-top: 2px;
+        }
+        .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+        .page-head { margin-bottom: 20px; }
+        .page-head h1 {
+            font-size: 24px; font-weight: 800;
+            display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--candy));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .page-head h1 svg { width: 26px; height: 26px; -webkit-text-fill-color: var(--primary); color: var(--primary); }
+        .page-head p { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+        .upload-panel {
+            padding: 18px; border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--surface); box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+        .upload-zone {
+            display: grid; place-items: center; gap: 8px;
+            min-height: 130px; padding: 20px;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, var(--surface-soft), var(--surface-hover));
+            text-align: center; cursor: pointer;
+            transition: all .18s ease;
+        }
+        .upload-zone:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .upload-icon {
+            width: 46px; height: 46px;
+            display: grid; place-items: center; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--candy));
+            color: #fff; box-shadow: 0 4px 14px var(--primary-glow);
+        }
+        .upload-icon svg { width: 24px; height: 24px; }
+        .upload-text { font-size: 14px; font-weight: 600; color: var(--text-secondary); word-break: break-all; }
+        .upload-sub { font-size: 11px; color: var(--muted); }
+        .status-line { font-size: 12px; color: var(--muted); min-height: 18px; margin-top: 10px; }
+
+        .toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            padding: 12px 14px; border-radius: var(--radius-sm);
+            background: var(--surface-soft); border: 1px solid var(--line);
+            margin-bottom: 14px;
+        }
+        .toolbar input {
+            flex: 1; min-width: 180px; padding: 8px 12px; font-size: 13px;
+            border-radius: 10px;
+        }
+        .toolbar-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+        .toolbar button { min-height: 34px; padding: 0 12px; font-size: 13px; }
+
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+        .doc-card {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 16px; border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--surface); box-shadow: var(--shadow-sm);
+            transition: all .18s ease;
+        }
+        .doc-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); transform: translateY(-1px); }
+        .doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .doc-title {
+            display: flex; align-items: center; gap: 8px; flex: 1;
+            font-size: 15px; font-weight: 700; color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .doc-title svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--primary); }
+        .doc-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+        .doc-actions button { min-height: 30px; padding: 0 10px; font-size: 12px; }
+        .doc-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .meta-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 6px;
+            background: var(--primary-soft); color: var(--primary-dark);
+            font-size: 11px; font-weight: 600;
+        }
+        .meta-tag svg { width: 11px; height: 11px; }
+        .meta-tag.plain { background: var(--surface-soft); color: var(--muted); }
+        .meta-tag.ready { background: var(--green-soft); color: var(--green); }
+        .meta-tag.warn { background: var(--amber-soft); color: var(--amber); }
+
+        .fold-hint {
+            text-align: center; padding: 12px;
+            font-size: 13px; color: var(--muted);
+            border: 1.5px dashed var(--line-strong);
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+            cursor: pointer; transition: all .18s ease;
+        }
+        .fold-hint:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+
+        .empty {
+            display: grid; place-items: center; gap: 10px;
+            padding: 60px 20px; text-align: center;
+            border: 2px dashed var(--line-strong);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            color: var(--muted);
+        }
+        .empty svg { width: 48px; height: 48px; color: var(--muted-light); }
+
+        @media (max-width: 640px) {
+            .topbar { padding: 12px 16px; }
+            .container { padding: 16px 12px 40px; }
+            .page-head h1 { font-size: 20px; }
+        }
+
+        html.theme-transitioning,
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 3.5s ease,
+            color 3.5s ease,
+            border-color 3.5s ease,
+            box-shadow 3.5s ease,
+            fill 3.5s ease,
+            stroke 3.5s ease !important;
+            transition-delay: 0s !important;
+        }
+        html.theme-no-transition,
+        html.theme-no-transition *,
+        html.theme-no-transition *::before,
+        html.theme-no-transition *::after {
+            transition: none !important;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header class="topbar">
+        <div class="brand">
+            <img src="/images/logo.png" alt="评鉴"
+                 style="width:100%;height:100%;max-width:38px;max-height:38px;object-fit:contain;display:block;">
+            <div class="brand-title">
+                评鉴
+                <span>知识库文档管理</span>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <button class="secondary" @click="goBack">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+                返回对话
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-head">
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8v13H3V8"/>
+                    <path d="M1 3h22v5H1z"/>
+                    <path d="M10 12h4"/>
+                </svg>
+                知识库文档
+            </h1>
+            <p>上传资料后，AI 会在对话里检索它们作为参考 · 共 {{ list.length }} 份 · {{ totalChunks }} 个片段</p>
+        </div>
+
+        <section class="upload-panel">
+            <label class="upload-zone" for="doc-file">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                </div>
+                <div class="upload-text">{{ uploading ? '正在解析…' : (selectedFileName || '点这上传文档') }}</div>
+                <div class="upload-sub">PDF / Word / MD / TXT / PPT / Excel · 选中即上传</div>
+            </label>
+            <input id="doc-file" type="file" style="display:none" ref="fileInput"
+                   accept=".pdf,.doc,.docx,.md,.txt,.ppt,.pptx,.xls,.xlsx"
+                   @change="onFileChange">
+            <div class="status-line">{{ status }}</div>
+        </section>
+
+        <div class="toolbar">
+            <input v-model="keyword" placeholder="🔍 搜索文件名">
+            <span class="toolbar-label">共 {{ filteredList.length }} 份</span>
+            <button class="ghost" @click="toggleSort" :title="sortDesc ? '当前：最新在前' : '当前：最早在前'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 16 4 4 4-4"/>
+                    <path d="M7 20V4"/>
+                    <path d="m21 8-4-4-4 4"/>
+                    <path d="M17 4v16"/>
+                </svg>
+                {{ sortDesc ? '最新在前' : '最早在前' }}
+            </button>
+            <button class="ghost" @click="loadDocuments" title="刷新">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M8 16H3v5"/>
+                </svg>
+                刷新
+            </button>
+        </div>
+
+        <div v-if="filteredList.length === 0" class="empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 8v13H3V8"/>
+                <path d="M1 3h22v5H1z"/>
+                <path d="M10 12h4"/>
+            </svg>
+            <div>{{ keyword ? '没搜到匹配的文档' : '还没有文档，上传一份试试 👆' }}</div>
+        </div>
+
+        <div v-else class="card-list">
+            <div v-for="doc in visibleList" :key="doc.id" class="doc-card">
+                <div class="doc-head">
+                    <div class="doc-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                            <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                        </svg>
+                        {{ doc.fileName }}
+                    </div>
+                    <div class="doc-actions">
+                        <button class="danger" @click="deleteDocument(doc)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                            删除
+                        </button>
+                    </div>
+                </div>
+                <div class="doc-meta">
+                    <span :class="['meta-tag', doc.status === 'READY' ? 'ready' : 'warn']">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {{ doc.status }}
+                    </span>
+                    <span class="meta-tag plain">{{ doc.chunkCount }} 片段</span>
+                    <span class="meta-tag plain">{{ formatSize(doc.fileSize) }}</span>
+                </div>
+            </div>
+
+            <div v-if="filteredList.length > visibleCount" class="fold-hint" @click="expandAll">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:4px;">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+                展开全部（还有 {{ filteredList.length - visibleCount }} 份）
+            </div>
+            <div v-else-if="expanded && filteredList.length > defaultCount" class="fold-hint" @click="collapseAll">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:4px;">
+                    <polyline points="18 15 12 9 6 15"/>
+                </svg>
+                收起
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const userId = ref(localStorage.getItem('xiaoyanUserId') || 'default');
+            const list = ref([]);
+            const keyword = ref('');
+            const sortDesc = ref(true);
+            const uploading = ref(false);
+            const status = ref('');
+            const selectedFileName = ref('');
+            const fileInput = ref(null);
+            const expanded = ref(false);
+            const defaultCount = 5;
+
+            const totalChunks = computed(() =>
+                list.value.reduce((s, d) => s + (d.chunkCount || 0), 0)
+            );
+
+            const filteredList = computed(() => {
+                const kw = keyword.value.trim().toLowerCase();
+                let arr = list.value;
+                if (kw) {
+                    arr = arr.filter(d => (d.fileName || '').toLowerCase().includes(kw));
+                }
+                arr = [...arr].sort((a, b) => sortDesc.value ? (b.id - a.id) : (a.id - b.id));
+                return arr;
+            });
+
+            const visibleCount = computed(() => {
+                if (expanded.value) return filteredList.value.length;
+                return Math.min(defaultCount, filteredList.value.length);
+            });
+
+            const visibleList = computed(() =>
+                filteredList.value.slice(0, visibleCount.value)
+            );
+
+            const expandAll = () => { expanded.value = true; };
+            const collapseAll = () => { expanded.value = false; };
+            const toggleSort = () => { sortDesc.value = !sortDesc.value; };
+
+            const formatSize = (size) => {
+                if (!size && size !== 0) return '未知';
+                if (size < 1024) return size + ' B';
+                if (size < 1048576) return (size / 1024).toFixed(1) + ' KB';
+                return (size / 1048576).toFixed(1) + ' MB';
+            };
+
+            const goBack = () => { window.location.href = '/index.html'; };
+
+            const loadDocuments = async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/documents', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) list.value = await res.json();
+                } catch (e) {
+                    console.error('加载失败:', e);
+                }
+            };
+
+            const onFileChange = () => {
+                const file = fileInput.value?.files?.[0];
+                if (!file) { selectedFileName.value = ''; return; }
+                selectedFileName.value = file.name;
+                uploadDocument(file);
+            };
+
+            const uploadDocument = async (file) => {
+                const fd = new FormData();
+                fd.append('file', file);
+                uploading.value = true;
+                status.value = '正在解析…';
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const res = await fetch('/api/documents', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd
+                    });
+                    if (!res.ok) {
+                        let msg = '上传失败';
+                        try {
+                            const err = await res.json();
+                            msg = err.error || err.message || msg;
+                        } catch (_) { /* 忽略 */ }
+                        throw new Error(msg);
+                    }
+                    const r = await res.json();
+                    status.value = '✓ 已入库：' + r.chunkCount + ' 个片段';
+                    selectedFileName.value = '';
+                    await loadDocuments();
+                } catch (e) {
+                    status.value = '上传失败：' + e.message;
+                } finally {
+                    uploading.value = false;
+                    if (fileInput.value) fileInput.value.value = '';
+                }
+            };
+
+            const deleteDocument = async (doc) => {
+                if (!confirm('确认删除《' + doc.fileName + '》？\n删除后相关片段与向量都会一并清理。')) return;
+                try {
+                    const token = localStorage.getItem('authToken');
+                    await fetch('/api/documents/' + doc.id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    await loadDocuments();
+                } catch (e) {
+                    console.error('删除失败:', e);
+                }
+            };
+
+            onMounted(loadDocuments);
+
+            return {
+                userId, list, keyword, sortDesc, uploading, status,
+                selectedFileName, fileInput, expanded, defaultCount,
+                totalChunks, filteredList, visibleList, visibleCount,
+                expandAll, collapseAll, toggleSort,
+                formatSize, goBack,
+                loadDocuments, onFileChange, deleteDocument
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

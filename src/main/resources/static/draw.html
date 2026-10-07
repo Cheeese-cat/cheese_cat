@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随手画 · 评鉴</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <script>
+        (function() {
+            if (localStorage.getItem('xiaoyanThemeDark') === 'true') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.global.prod.js"></script>
+    <style>
+        :root {
+            --bg: #f6f5ff;
+            --surface: #ffffff;
+            --surface-soft: #faf9ff;
+            --surface-hover: #f2f0ff;
+            --line: #e6e3f7;
+            --line-strong: #c9c3e8;
+            --text: #1e1b2e;
+            --text-secondary: #3d3656;
+            --muted: #6d6588;
+            --muted-light: #a098c0;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-soft: #ede9fe;
+            --primary-glow: rgba(124, 58, 237, .22);
+            --accent: #06b6d4;
+            --candy: #f472b6;
+            --candy-soft: #fce7f3;
+            --red: #ef4444;
+            --red-soft: #fee2e2;
+            --shadow-sm: 0 2px 8px rgba(30, 27, 46, .06);
+            --shadow: 0 6px 20px rgba(30, 27, 46, .09);
+            --shadow-lg: 0 16px 40px rgba(30, 27, 46, .14);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0d17;
+            --surface: #1a1726;
+            --surface-soft: #221e30;
+            --surface-hover: #2a2538;
+            --line: #2e2940;
+            --line-strong: #3f3956;
+            --text: #f0eef8;
+            --text-secondary: #c8c3dd;
+            --muted: #8b84a8;
+            --muted-light: #5c5578;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .4);
+            --shadow: 0 6px 20px rgba(0, 0, 0, .5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .6);
+            --primary-dark: #c4b5fd;
+            --primary-light: #8b5cf6;
+            --primary-soft: #2a1f4a;
+            --accent-dark: #67e8f9;
+            --accent-soft: #0d3a4a;
+            --candy-dark: #f9a8d4;
+            --candy-soft: #3a1d2e;
+            --green: #34d399;
+            --green-soft: #0d3a2a;
+            --amber: #fbbf24;
+            --amber-soft: #3a2d0d;
+            --red: #fca5a5;
+            --red-soft: #4a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(124, 58, 237, .06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, .06) 0%, transparent 40%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 40px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s ease;
+            box-shadow: 0 3px 10px var(--primary-glow);
+            font-family: inherit;
+        }
+
+        button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px var(--primary-glow);
+            filter: brightness(1.05);
+        }
+
+        button:active:not(:disabled) { transform: translateY(0); }
+
+        button.secondary {
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1.5px solid var(--line);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: var(--primary-soft);
+            color: var(--primary-dark);
+            border-color: var(--primary-light);
+        }
+
+        button.danger {
+            background: var(--surface);
+            color: var(--red);
+            border: 1px solid var(--red-soft);
+            box-shadow: none;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        button.danger:hover:not(:disabled) {
+            background: var(--red-soft);
+            border-color: var(--red);
+        }
+
+        button.ghost {
+            background: transparent;
+            color: var(--muted);
+            box-shadow: none;
+            padding: 0 10px;
+        }
+
+        button.ghost:hover:not(:disabled) {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 24px;
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--line);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .brand { display: flex; align-items: center; gap: 10px; }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--candy) 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .brand-mark svg { width: 20px; height: 20px; }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.15;
+        }
+
+        .brand-title span {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+        .container {
+            flex: 1;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .page-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-head h1 {
+            font-size: 22px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--candy));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-head h1 svg {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+            -webkit-text-fill-color: var(--primary);
+        }
+
+        .page-head p { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--line);
+        }
+
+        .toolbar-label {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .tool-btn {
+            min-height: 36px;
+            padding: 0 12px;
+            font-size: 13px;
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            box-shadow: 0 3px 10px var(--primary-glow);
+            border-color: transparent;
+        }
+
+        .color-dot {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform .15s ease, border-color .15s ease;
+            box-shadow: 0 0 0 1px rgba(0,0,0,.05);
+        }
+
+        .color-dot:hover { transform: scale(1.1); }
+        .color-dot.active {
+            border-color: var(--primary);
+            transform: scale(1.15);
+        }
+
+        .color-input {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--line);
+            border-radius: 8px;
+            padding: 0;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        input[type="range"] {
+            width: 100px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .size-preview {
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+        }
+
+        .size-dot {
+            background: var(--text);
+            border-radius: 50%;
+        }
+
+        .canvas-wrap {
+            flex: 1;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            min-height: 420px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            background: #ffffff;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 12px rgba(30, 27, 46, .08);
+            cursor: crosshair;
+            touch-action: none;
+            max-width: 100%;
+            border: 1px solid var(--line);
+        }
+
+        .eraser-cursor {
+            position: absolute;
+            border: 2px dashed rgba(124, 58, 237, .75);
+            border-radius: 50%;
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+            background: rgba(124, 58, 237, .08);
+            transform: translate(-50%, -50%);
+            box-sizing: border-box;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-line {
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            min-height: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .topbar { padding: 12px 16px; }
+            .brand-title { display: none; }
+            .container { padding: 12px; }
+            .toolbar { padding: 10px 12px; gap: 10px; }
+            .toolbar-label { display: none; }
+            .canvas-wrap { padding: 10px; min-height: 300px; }
+            input[type="range"] { width: 60px; }
+            .page-head h1 { font-size: 18px; }
+        }
+
+        html.theme-transitioning,
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 3.5s ease,
+            color 3.5s ease,
+            border-color 3.5s ease,
+            box-shadow 3.5s ease,
+            fill 3.5s ease,
+            stroke 3.5s ease !important;
+            transition-delay: 0s !important;
+        }
+        html.theme-no-transition,
+        html.theme-no-transition *,
+        html.theme-no-transition *::before,
+        html.theme-no-transition *::after {
+            transition: none !important;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header class="topbar">
+        <div class="brand">
+            <img src="/images/logo.png" alt="评鉴"
+                 style="width:100%;height:100%;max-width:38px;max-height:38px;object-fit:contain;display:block;">
+            <div class="brand-title">
+                评鉴
+                <span>随手画 · 自由创作</span>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <button class="secondary" @click="goBack">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+                返回对话
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-head">
+            <div>
+                <h1>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        <path d="M2 2l7.586 7.586"/>
+                        <circle cx="11" cy="11" r="2"/>
+                    </svg>
+                    随手画 · 画布
+                </h1>
+                <p>铅笔、马克笔、荧光笔、喷枪、填充、橡皮 · 画完直接发给评鉴</p>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <!-- 工具 -->
+            <div class="toolbar-group">
+                <span class="toolbar-label">工具</span>
+                <button :class="['secondary', 'tool-btn', tool === 'pen' ? 'active' : '']"
+                        @click="tool = 'pen'" title="铅笔">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                    </svg>
+                    铅笔
+                </button>
+                <button :class="['secondary', 'tool-btn', tool === 'marker' ? 'active' : '']"
+                        @click="tool = 'marker'" title="马克笔（半透明粗笔）">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3l6 6-9 9H3v-9z"/>
+                    </svg>
+                    马克笔
+                </button>
+                <button :class="['secondary', 'tool-btn', tool === 'highlighter' ? 'active' : '']"
+                        @click="tool = 'highlighter'" title="荧光笔（超粗半透明）">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l-6 6v3h3l6-6"/>
+                        <path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4z"/>
+                    </svg>
+                    荧光笔
+                </button>
+                <button :class="['secondary', 'tool-btn', tool === 'spray' ? 'active' : '']"
+                        @click="tool = 'spray'" title="喷枪（散点喷墨）">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                        <circle cx="9" cy="9" r="1"/>
+                        <circle cx="15" cy="9" r="1"/>
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="9" cy="15" r="1"/>
+                        <circle cx="15" cy="15" r="1"/>
+                    </svg>
+                    喷枪
+                </button>
+                <button :class="['secondary', 'tool-btn', tool === 'fill' ? 'active' : '']"
+                        @click="tool = 'fill'" title="燃料桶（填充连通区域）">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0z"/>
+                        <path d="M5 2l5 5"/>
+                        <path d="M2 13h15"/>
+                        <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4z"/>
+                    </svg>
+                    填充
+                </button>
+                <button :class="['secondary', 'tool-btn', tool === 'eraser' ? 'active' : '']"
+                        @click="tool = 'eraser'" title="橡皮">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+                        <path d="M22 21H7"/>
+                    </svg>
+                    橡皮
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- 颜色 -->
+            <div class="toolbar-group">
+                <span class="toolbar-label">颜色</span>
+                <div v-for="c in colors" :key="c"
+                     :class="['color-dot', color === c ? 'active' : '']"
+                     :style="{ background: c }"
+                     @click="color = c; tool = 'pen'">
+                </div>
+                <input type="color" class="color-input" v-model="color" @input="tool = 'pen'" title="自定义颜色">
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- 粗细 -->
+            <div class="toolbar-group">
+                <span class="toolbar-label">粗细</span>
+                <input type="range" min="1" max="30" v-model.number="size">
+                <div class="size-preview">
+                    <div class="size-dot" :style="{ width: Math.min(size, 20) + 'px', height: Math.min(size, 20) + 'px' }"></div>
+                </div>
+                <span style="font-size:12px;color:var(--muted);min-width:20px;">{{ size }}</span>
+            </div>
+        </div>
+
+        <div class="canvas-wrap">
+            <canvas
+                ref="canvas"
+                width="900"
+                height="520"
+                @mousedown="onStart"
+                @mousemove="onMove"
+                @mouseup="onEnd"
+                @mouseleave="onEnd"
+                @touchstart.prevent="onStartTouch"
+                @touchmove.prevent="onMoveTouch"
+                @touchend="onEnd">
+            </canvas>
+            <div class="eraser-cursor" ref="eraserCursor"></div>
+        </div>
+
+        <div class="bottom-actions">
+            <button class="secondary" @click="undo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7v6h6"/>
+                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                </svg>
+                撤销
+            </button>
+            <button class="secondary" @click="clearCanvas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                </svg>
+                清空
+            </button>
+            <button @click="sendToChat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4Z"/>
+                    <path d="M22 2 11 13"/>
+                </svg>
+                画好了，发给评鉴
+            </button>
+        </div>
+
+        <div class="status-line">{{ status }}</div>
+    </main>
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const canvas = ref(null);
+            const tool = ref('pen');
+            const color = ref('#1e1b2e');
+            const size = ref(3);
+            const status = ref('');
+            const colors = [
+                '#000000', '#1e1b2e', '#6d6588', '#9ca3af', '#ffffff',
+                '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+                '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#7c3aed',
+                '#a855f7', '#ec4899', '#f472b6', '#8b5cf6', '#14b8a6',
+            ];
+            const eraserCursor = ref(null);
+
+            let ctx = null;
+            let drawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            const history = [];
+            const MAX_HISTORY = 20;
+
+            const getPos = (e) => {
+                const c = canvas.value;
+                const r = c.getBoundingClientRect();
+                return {
+                    x: (e.clientX - r.left) * (c.width / r.width),
+                    y: (e.clientY - r.top) * (c.height / r.height)
+                };
+            };
+
+            const getPosTouch = (e) => {
+                const c = canvas.value;
+                const t = e.touches[0];
+                const r = c.getBoundingClientRect();
+                return {
+                    x: (t.clientX - r.left) * (c.width / r.width),
+                    y: (t.clientY - r.top) * (c.height / r.height)
+                };
+            };
+
+            const pushHistory = () => {
+                const c = canvas.value;
+                if (!c || !ctx) return;
+                try {
+                    const snapshot = ctx.getImageData(0, 0, c.width, c.height);
+                    history.push(snapshot);
+                    if (history.length > MAX_HISTORY) history.shift();
+                } catch (e) { /* ignore */ }
+            };
+
+            const applyStyle = () => {
+                if (!ctx) return;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = 'source-over';
+
+                switch (tool.value) {
+                    case 'pen':
+                        ctx.strokeStyle = color.value;
+                        ctx.lineWidth = size.value;
+                        break;
+                    case 'marker':
+                        ctx.strokeStyle = color.value;
+                        ctx.lineWidth = size.value * 2.5;
+                        ctx.globalAlpha = 0.7;
+                        break;
+                    case 'highlighter':
+                        ctx.strokeStyle = color.value;
+                        ctx.lineWidth = size.value * 5;
+                        ctx.globalAlpha = 0.35;
+                        break;
+                    case 'spray':
+                        ctx.strokeStyle = color.value;
+                        ctx.lineWidth = 1;
+                        ctx.globalAlpha = 0.6;
+                        break;
+                    case 'eraser':
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = size.value * 3;
+                        break;
+                }
+            };
+
+            const sprayAt = (x, y) => {
+                if (!ctx) return;
+                const radius = size.value * 3;
+                const density = Math.max(5, Math.round(size.value * 2));
+                for (let i = 0; i < density; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.random() * radius;
+                    const px = x + Math.cos(angle) * r;
+                    const py = y + Math.sin(angle) * r;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 0.8, 0, Math.PI * 2);
+                    ctx.fillStyle = color.value;
+                    ctx.fill();
+                }
+            };
+
+            const hexToRgb = (hex) => {
+                const h = hex.replace('#', '');
+                const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+                return {
+                    r: parseInt(v.substring(0, 2), 16),
+                    g: parseInt(v.substring(2, 4), 16),
+                    b: parseInt(v.substring(4, 6), 16)
+                };
+            };
+
+            const floodFill = (startX, startY, fillColorHex) => {
+                const c = canvas.value;
+                if (!c || !ctx) return;
+
+                const w = c.width, h = c.height;
+                const imageData = ctx.getImageData(0, 0, w, h);
+                const data = imageData.data;
+
+                const sx = Math.floor(startX);
+                const sy = Math.floor(startY);
+                if (sx < 0 || sy < 0 || sx >= w || sy >= h) return;
+
+                const startIdx = (sy * w + sx) * 4;
+                const startR = data[startIdx];
+                const startG = data[startIdx + 1];
+                const startB = data[startIdx + 2];
+                const startA = data[startIdx + 3];
+
+                const target = hexToRgb(fillColorHex);
+                const tr = target.r, tg = target.g, tb = target.b;
+
+                if (Math.abs(startR - tr) < 4 && Math.abs(startG - tg) < 4 && Math.abs(startB - tb) < 4 && startA > 250) {
+                    return;
+                }
+
+                const tolerance = 32;
+                const visited = new Uint8Array(w * h);
+                const stack = [[sx, sy]];
+
+                const matchStart = (r, g, b, a) => {
+                    return Math.abs(r - startR) <= tolerance
+                        && Math.abs(g - startG) <= tolerance
+                        && Math.abs(b - startB) <= tolerance
+                        && Math.abs(a - startA) <= tolerance;
+                };
+
+                while (stack.length > 0) {
+                    const [x, y] = stack.pop();
+                    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+                    const idx = y * w + x;
+                    if (visited[idx]) continue;
+                    const di = idx * 4;
+                    if (!matchStart(data[di], data[di + 1], data[di + 2], data[di + 3])) continue;
+
+                    visited[idx] = 1;
+                    data[di] = tr;
+                    data[di + 1] = tg;
+                    data[di + 2] = tb;
+                    data[di + 3] = 255;
+
+                    stack.push([x + 1, y]);
+                    stack.push([x - 1, y]);
+                    stack.push([x, y + 1]);
+                    stack.push([x, y - 1]);
+                }
+                ctx.putImageData(imageData, 0, 0);
+            };
+
+            const updateEraserCursor = (e) => {
+                const cur = eraserCursor.value;
+                const c = canvas.value;
+                if (!cur || !c) return;
+
+                if (tool.value !== 'eraser') {
+                    cur.style.display = 'none';
+                    return;
+                }
+
+                const canvasRect = c.getBoundingClientRect();
+                const wrapRect = c.parentElement.getBoundingClientRect();
+
+                const screenX = e.clientX - wrapRect.left;
+                const screenY = e.clientY - wrapRect.top;
+
+                const canvasRadius = (size.value * 3) / 2;
+                const scale = canvasRect.width / c.width;
+                const screenRadius = canvasRadius * scale;
+
+                cur.style.display = 'block';
+                cur.style.left = screenX + 'px';
+                cur.style.top = screenY + 'px';
+                cur.style.width = (screenRadius * 2) + 'px';
+                cur.style.height = (screenRadius * 2) + 'px';
+            };
+
+            const onStart = (e) => {
+                if (!ctx) return;
+                pushHistory();
+                const p = getPos(e);
+                lastX = p.x; lastY = p.y;
+
+                if (tool.value === 'fill') {
+                    floodFill(p.x, p.y, color.value);
+                    status.value = '已填充';
+                    return;
+                }
+
+                drawing = true;
+                if (tool.value === 'spray') {
+                    sprayAt(p.x, p.y);
+                }
+            };
+
+            const onMove = (e) => {
+                updateEraserCursor(e);
+
+                if (!drawing || !ctx) return;
+                const p = getPos(e);
+
+                if (tool.value === 'spray') {
+                    sprayAt(p.x, p.y);
+                    lastX = p.x; lastY = p.y;
+                    return;
+                }
+
+                applyStyle();
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                lastX = p.x; lastY = p.y;
+            };
+
+            const onEnd = () => {
+                drawing = false;
+                if (ctx) ctx.globalAlpha = 1;
+            };
+
+            const onStartTouch = (e) => {
+                if (!ctx) return;
+                pushHistory();
+                const p = getPosTouch(e);
+                lastX = p.x; lastY = p.y;
+
+                if (tool.value === 'fill') {
+                    floodFill(p.x, p.y, color.value);
+                    status.value = '已填充';
+                    return;
+                }
+                drawing = true;
+            };
+
+            const onMoveTouch = (e) => {
+                if (!drawing || !ctx) return;
+                const p = getPosTouch(e);
+
+                if (tool.value === 'spray') {
+                    sprayAt(p.x, p.y);
+                    lastX = p.x; lastY = p.y;
+                    return;
+                }
+
+                applyStyle();
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                lastX = p.x; lastY = p.y;
+            };
+
+            const clearCanvas = () => {
+                const c = canvas.value;
+                if (!c || !ctx) return;
+                pushHistory();
+                ctx.clearRect(0, 0, c.width, c.height);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, c.width, c.height);
+                status.value = '已清空';
+            };
+
+            const undo = () => {
+                if (!ctx || history.length === 0) {
+                    status.value = '没有可撤销的操作';
+                    return;
+                }
+                const last = history.pop();
+                ctx.putImageData(last, 0, 0);
+                status.value = '已撤销';
+            };
+
+            const sendToChat = () => {
+                const c = canvas.value;
+                if (!c) return;
+                const blank = document.createElement('canvas');
+                blank.width = c.width; blank.height = c.height;
+                if (c.toDataURL() === blank.toDataURL()) {
+                    status.value = '画布还是空的，画几笔先';
+                    return;
+                }
+                const data = c.toDataURL('image/png');
+                try {
+                    sessionStorage.setItem('pendingDrawing', data);
+                } catch (e) {
+                    status.value = '图片太大，发送失败';
+                    return;
+                }
+                window.location.href = '/index.html';
+            };
+
+            const goBack = () => {
+                window.location.href = '/index.html';
+            };
+
+            onMounted(() => {
+                const c = canvas.value;
+                if (!c) return;
+                ctx = c.getContext('2d');
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, c.width, c.height);
+            });
+
+            return {
+                canvas, tool, color, size, status, colors, eraserCursor,
+                onStart, onMove, onEnd,
+                onStartTouch, onMoveTouch,
+                clearCanvas, undo, sendToChat, goBack
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
